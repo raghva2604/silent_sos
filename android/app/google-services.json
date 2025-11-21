@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "200380946339",
+    "project_id": "my-emergency-app-cfab4",
+    "storage_bucket": "my-emergency-app-cfab4.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:200380946339:android:42f6f9da0b9f6d3dc8ac16",
+        "android_client_info": {
+          "package_name": "com.example.silent_sos"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD6GwXsM1NEbMjNQ3Ydj0T44g4RuYKSg04"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

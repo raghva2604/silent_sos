@@ -1,0 +1,19 @@
+{
+  "name": "emergency-ai-vscode",
+  "version": "1.0.0",
+  "description": "Emergency AI Assistant for VS Code",
+  "main": "src/emergency-ai-client.js",
+  "scripts": {
+    "test": "node src/test-emergency.js",
+    "cli": "node src/emergency-cli.js",
+    "health": "node -e \"new (require('./src/emergency-ai-client'))().healthCheck()\""
+  },
+  "keywords": ["emergency", "ai", "assistant", "n8n"],
+  "author": "Your Name",
+  "license": "MIT",
+  "dependencies": {
+    "dotenv": "^16.0.0",
+    "form-data": "^4.0.0",
+    "node-fetch": "^2.6.7"
+  }
+}

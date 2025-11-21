@@ -1,0 +1,124 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    package="com.example.silent_sos">
+    <!-- Runtime permissions required by the app. These must be declared so the
+        platform can show permission prompts at runtime when requested by the
+        Flutter/Dart code (permission_handler / geolocator / flutter_contacts).
+    -->
+    <uses-feature
+        android:name="android.hardware.telephony"
+        android:required="false"
+        tools:targetApi="5" />
+    <uses-feature
+        android:name="android.hardware.camera"
+        android:required="false"
+        tools:targetApi="5" />
+
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.READ_CONTACTS" />
+    <!-- Camera & microphone required for automatic media recording (opt-in) -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <!-- Background location access (request separately on Android 10+ to allow 'Allow all the time') -->
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION"
+        tools:ignore="BackgroundLocationPolicy" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <!-- Sending via SMS Intents typically does not require SEND_SMS, but if
+        you want to send programmatically without user interaction include it. -->
+    <uses-permission android:name="android.permission.SEND_SMS"
+        tools:ignore="SmsAndCallLogPolicy" />
+    <!-- Notifications on Android 13+ require a runtime permission -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Network access for Emergency AI webhook communication -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Storage access for file uploads and emergency data -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.CALL_PHONE"/>
+    <uses-permission android:name="android.permission.WRITE_SMS"
+        tools:ignore="SmsAndCallLogPolicy,SystemPermissionTypo" />
+
+    <application
+        android:label="silent_sos"
+        android:name="${applicationName}"
+        android:icon="@mipmap/ic_launcher">
+        <!-- FileProvider to serve local media files to the Telephony/MMS APIs when sending
+             multimedia messages silently. We expose cache/, files/, and external storage
+             paths. The authority is <applicationId>.fileprovider and the paths are
+             defined in res/xml/file_paths.xml. -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:launchMode="singleTop"
+            android:taskAffinity=""
+            android:theme="@style/LaunchTheme"
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
+            android:hardwareAccelerated="true"
+            android:windowSoftInputMode="adjustResize">
+            <!-- Specifies an Android theme to apply to this Activity as soon as
+                 the Android process has started. This theme is visible to the user
+                 while the Flutter UI initializes. After that, this theme continues
+                 to determine the Window background behind the Flutter UI. -->
+            <meta-data
+              android:name="io.flutter.embedding.android.NormalTheme"
+              android:resource="@style/NormalTheme"
+              />
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+        </activity>
+    <!-- Foreground service used for fall detection and background sends. Declare the
+         foregroundServiceType(s) used here so startForeground(type) calls succeed on
+         newer Android versions. -->
+    <!-- NOTE: For local testing we declare a benign foregroundServiceType that does not
+         require special foreground-only location permissions. On production builds you
+         should set this to the accurate type(s) used (for example "location") and
+         implement the proper runtime permission and user consent flows for
+         android.permission.FOREGROUND_SERVICE_LOCATION on affected Android versions. -->
+    <service
+        android:name=".ForegroundSensorService"
+        android:enabled="true"
+        android:exported="false"
+        android:foregroundServiceType="mediaPlayback" />
+    <!-- Native foreground audio recorder used for background audio captures when the user opts in -->
+
+    <service
+        android:name=".ForegroundRecordingService"
+        android:enabled="true"
+        android:exported="false"
+        android:foregroundServiceType="microphone" />
+    <receiver android:name=".BootReceiver" android:enabled="true" android:exported="false">
+        <intent-filter>
+            <action android:name="android.intent.action.BOOT_COMPLETED" />
+        </intent-filter>
+    </receiver>
+        <!-- Don't delete the meta-data below.
+             This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
+        <meta-data
+            android:name="flutterEmbedding"
+            android:value="2" />
+    </application>
+    <!-- Required to query activities that can process text, see:
+         https://developer.android.com/training/package-visibility and
+         https://developer.android.com/reference/android/content/Intent#ACTION_PROCESS_TEXT.
+
+         In particular, this is used by the Flutter engine in io.flutter.plugin.text.ProcessTextPlugin. -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.PROCESS_TEXT"/>
+            <data android:mimeType="text/plain"/>
+        </intent>
+    </queries>
+</manifest>
