@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:record/record.dart';
 import 'package:path_provider/path_provider.dart';
 import 'services/api.dart';
-import 'config.dart';
+import 'package:silent_sos/config.dart';
 import 'package:image_picker/image_picker.dart';
 
 void main() => runApp(const MyApp());

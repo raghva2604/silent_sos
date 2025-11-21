@@ -1,90 +1,59 @@
-// TFLite inference helpers for both classifier and SSD-style detector
-// Adapt the input/output shapes and preprocessing to your exact model.
+// Simplified TFLite inference helpers that avoid tflite_flutter_helper types.
+// Uses raw buffers with tflite_flutter Interpreter. Adapt preprocessing to your model.
 
-import 'dart:io';
-import 'dart:typed_data';
 import 'package:tflite_flutter/tflite_flutter.dart';
-import 'package:tflite_flutter_helper/tflite_flutter_helper.dart';
 
-class TFLiteClassifier {
+class SimpleTFLiteModel {
   late Interpreter _interpreter;
-  late TensorImage _inputImage;
-  late TensorBuffer _outputBuffer;
-  final int inputSize;
-
-  TFLiteClassifier({required this.inputSize});
 
   Future<void> loadModel(String assetPath, {int numThreads = 1}) async {
     final options = InterpreterOptions()..threads = numThreads;
     _interpreter = await Interpreter.fromAsset(assetPath, options: options);
-
-    final inputShape = _interpreter.getInputTensor(0).shape; // e.g. [1,224,224,3]
-    final outputShape = _interpreter.getOutputTensor(0).shape; // e.g. [1,1000]
-
-    _inputImage = TensorImage.fromType(TensorImageType.float32);
-    _outputBuffer = TensorBuffer.createFixedSize(outputShape, TfLiteType.float32);
   }
 
-  /// Preprocess: resize + normalize. Adjust normalization to model's expectation.
-  TensorImage preprocess(ImageProcessor imageProcessor, TensorImage inputImage) {
-    return imageProcessor.process(inputImage);
+  /// Run a model that takes a float32 input tensor of shape [1,h,w,3] and
+  /// returns a float32 output vector. `input` should contain normalized floats.
+  List<double> runForVector(List<double> input, List<int> inputShape, List<int> outputShape) {
+    // Build nested list for interpreter input
+    final inputTensor = _wrapInput(input, inputShape);
+
+    // Prepare output buffer
+    final outputLength = outputShape.reduce((a, b) => a * b);
+    final outputBuffer = List.filled(outputLength, 0.0);
+
+    _interpreter.run(inputTensor, outputBuffer);
+
+    return outputBuffer.map((e) => e.toDouble()).toList();
   }
 
-  List<double> predict(TensorImage inputImage) {
-    _interpreter.run(inputImage.buffer, _outputBuffer.buffer);
-    return _outputBuffer.getDoubleList();
-  }
-}
-
-class TFLiteDetector {
-  late Interpreter _interpreter;
-  late TensorImage _inputImage;
-  final int inputSize;
-
-  TFLiteDetector({required this.inputSize});
-
-  Future<void> loadModel(String assetPath, {int numThreads = 1}) async {
-    final options = InterpreterOptions()..threads = numThreads;
-    _interpreter = await Interpreter.fromAsset(assetPath, options: options);
-
-    _inputImage = TensorImage.fromType(TensorImageType.uint8);
+  /// Run a model with multiple outputs. Provide prepared input and a map of
+  /// output index -> preallocated buffer (List or TypedData) to fill.
+  void runForMultipleInputs(List<Object> inputs, Map<int, Object> outputs) {
+    _interpreter.runForMultipleInputs(inputs, outputs);
   }
 
-  /// Run detector and return raw outputs. Postprocessing (NMS, decode boxes) required.
-  Map<String, Object> detect(TensorImage inputImage) {
-    // Example output names vary by model. Typical SSD outputs:
-    // locations: [1,num_boxes,4]
-    // classes: [1,num_boxes]
-    // scores: [1,num_boxes]
-    // num_detections: [1]
-
-    final outputs = <int, Object>{};
-
-    // Prepare buffers based on interpreter output tensors
-    for (int i = 0; i < _interpreter.getOutputTensors().length; i++) {
-      final t = _interpreter.getOutputTensor(i);
-      final shape = t.shape;
-      final dtype = t.type;
-      outputs[i] = TensorBuffer.createFixedSize(shape, dtype);
+  dynamic _wrapInput(List<double> flat, List<int> shape) {
+    // convert flat list into nested lists matching shape e.g. [1,h,w,3]
+    if (shape.length == 1) return flat;
+    // recursive builder
+    int idx = 0;
+    Object build(int dim) {
+      final len = shape[dim];
+      if (dim == shape.length - 1) {
+        final out = List<double>.filled(len, 0.0);
+        for (int i = 0; i < len; i++) {
+          out[i] = flat[idx++];
+        }
+        return out;
+      } else {
+        final out = List<dynamic>.filled(len, null, growable: false);
+        for (int i = 0; i < len; i++) {
+          out[i] = build(dim + 1);
+        }
+        return out;
+      }
     }
 
-    _interpreter.runForMultipleInputs([inputImage.buffer], outputs);
-
-    return outputs;
+    return build(0);
   }
 }
-
-/*
-Notes:
-- For classification: use TensorImage + ImageProcessor from tflite_flutter_helper to resize/normalize.
-  Example preprocess:
-    final processor = ImageProcessorBuilder()
-        .add(ResizeOp(inputSize, inputSize, ResizeMethod.BILINEAR))
-        .add(NormalizeOp(127.5, 127.5)) // if model expects [-1,1]
-        .build();
-    var ti = TensorImage.fromFile(File(path));
-    ti = processor.process(ti);
-
-- For detection: model outputs differ. Inspect `_interpreter.getOutputTensors()` to determine shapes and types, then decode boxes and apply NMS.
-- Provide exact model input size and output layout if you want a tailored `runDetection` helper that returns parsed boxes/labels.
-*/

@@ -1,5 +1,4 @@
 // TFLite helper snippet for Flutter using tflite_flutter
-import 'dart:io';
 import 'package:tflite_flutter/tflite_flutter.dart';
 
 class TFLiteHelper {
@@ -9,11 +8,12 @@ class TFLiteHelper {
     _interpreter = await Interpreter.fromAsset(assetPath);
   }
 
-  /// Example for a simple image classifier that expects a 224x224 RGB float input
-  /// Adapt preprocessing and output handling for your model.
-  List<double> runInference(List<double> inputTensor, List<int> inputShape) {
-    final output = List.filled(1000, 0.0).reshape([1, 1000]);
-    _interpreter.run(inputTensor.reshape([1, ...inputShape]), output);
-    return output.cast<double>();
+  /// Run inference where `inputTensor` is a nested List matching the model input shape
+  /// (for example: [[[...], ...], ...]) and `outputShape` is the expected output shape.
+  List<double> runInference(Object inputTensor, List<int> outputShape) {
+    final outputLen = outputShape.reduce((a, b) => a * b);
+    final output = List<double>.filled(outputLen, 0.0);
+    _interpreter.run(inputTensor, output);
+    return output.map((e) => e.toDouble()).toList();
   }
 }
