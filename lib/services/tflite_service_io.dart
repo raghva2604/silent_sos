@@ -69,16 +69,16 @@ class TFLiteService {
     final outputTensor = _interpreter!.getOutputTensor(0);
     final outputShape = outputTensor.shape; // e.g. [1,1000]
     final outputSize = outputShape.reduce((a, b) => a * b);
-    var output = List.filled(outputSize, 0.0);
+    final output = List<double>.filled(outputSize, 0.0);
 
     // Run
     _interpreter!.run(input4d, output);
 
     // find top index
     int topIndex = 0;
-    double topVal = (output[0] as num).toDouble();
+    double topVal = output.isNotEmpty ? output[0] : 0.0;
     for (int i = 1; i < output.length; i++) {
-      final v = (output[i] as num).toDouble();
+      final v = output[i];
       if (v > topVal) {
         topVal = v;
         topIndex = i;

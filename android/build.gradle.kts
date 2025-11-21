@@ -5,6 +5,23 @@ allprojects {
     }
 }
 
+// Apply namespace fixes for older plugin modules
+subprojects {
+    afterEvaluate {
+        if (name in listOf("record", "tflite_flutter")) {
+            extensions.findByName("android")?.let { android ->
+                try {
+                    @Suppress("UNCHECKED_CAST")
+                    val androidExt = android as com.android.build.gradle.LibraryExtension
+                    androidExt.namespace = "com.example.$name"
+                } catch (e: Exception) {
+                    println("Could not set namespace for $name: ${e.message}")
+                }
+            }
+        }
+    }
+}
+
 val newBuildDir: Directory =
     rootProject.layout.buildDirectory
         .dir("../../build")

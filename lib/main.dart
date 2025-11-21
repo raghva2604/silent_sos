@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 // native MethodChannel imported above
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
@@ -29,21 +30,26 @@ final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 // This function is now separate and can be awaited properly.
 Future<void> initializeServices() async {
   try {
-    await Firebase.initializeApp();
-    FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterError;
+    // Skip Firebase initialization on web (requires configuration and doesn't support all features)
+    if (!kIsWeb) {
+      await Firebase.initializeApp();
+      FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterError;
+    }
   } catch (e) {
     debugPrint('Firebase initialization failed: $e');
   }
 
   // Ensure we have an authenticated Firebase user for Storage uploads.
-  try {
-    final auth = FirebaseAuth.instance;
-    if (auth.currentUser == null) {
-      await auth.signInAnonymously();
-      debugPrint('Signed in anonymously to Firebase for Storage uploads.');
+  if (!kIsWeb) {
+    try {
+      final auth = FirebaseAuth.instance;
+      if (auth.currentUser == null) {
+        await auth.signInAnonymously();
+        debugPrint('Signed in anonymously to Firebase for Storage uploads.');
+      }
+    } catch (e) {
+      debugPrint('Firebase anonymous sign-in failed: $e');
     }
-  } catch (e) {
-    debugPrint('Firebase anonymous sign-in failed: $e');
   }
 
   try {

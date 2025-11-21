@@ -46,9 +46,9 @@ class SimpleTFLiteModel {
         }
         return out;
       } else {
-        final out = List<dynamic>.filled(len, null, growable: false);
+        final out = <dynamic>[];
         for (int i = 0; i < len; i++) {
-          out[i] = build(dim + 1);
+          out.add(build(dim + 1));
         }
         return out;
       }

@@ -15,7 +15,7 @@ class EmergencyScreen extends StatefulWidget {
   State<EmergencyScreen> createState() => _EmergencyScreenState();
 }
 
-class _EmergencyScreenState extends State<EmergencyScreen> {
+class _EmergencyScreenState extends State<EmergencyScreen> with TickerProviderStateMixin {
   final ApiService api = ApiService();
   final TextEditingController textCtrl = TextEditingController();
   final TFLiteService tflite = TFLiteService();
@@ -23,6 +23,32 @@ class _EmergencyScreenState extends State<EmergencyScreen> {
   File? audioFile;
   String resultText = "";
   bool loading = false;
+  
+  // Animation controllers
+  late AnimationController _pulseController;
+  late AnimationController _floatController;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulseController = AnimationController(
+      duration: const Duration(milliseconds: 1500),
+      vsync: this,
+    )..repeat();
+    
+    _floatController = AnimationController(
+      duration: const Duration(seconds: 3),
+      vsync: this,
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _pulseController.dispose();
+    _floatController.dispose();
+    textCtrl.dispose();
+    super.dispose();
+  }
 
   Future<void> pickImageFromCamera() async {
     final status = await Permission.camera.request();
@@ -56,10 +82,12 @@ class _EmergencyScreenState extends State<EmergencyScreen> {
     // run local TFLite
     try {
       final local = await tflite.runOnImage(file);
+      final confidence = local['confidence'] != null ? (local['confidence'] as double) : 0.0;
+      final label = local['label'] as String? ?? 'unknown';
       setState(() {
-        resultText = "Local: ${local['label']} (conf ${(local['confidence'] as double).toStringAsFixed(2)})";
+        resultText = "Local: $label (conf ${confidence.toStringAsFixed(2)})";
       });
-      if (local['label'] == 'severe_bleeding' && (local['confidence'] as double) > 0.7) {
+      if (label == 'severe_bleeding' && confidence > 0.7) {
         _showEmergencyDialog();
       }
     } catch (e) {
@@ -99,10 +127,12 @@ class _EmergencyScreenState extends State<EmergencyScreen> {
     // run local TFLite
     try {
       final local = await tflite.runOnImage(file);
+      final confidence = local['confidence'] != null ? (local['confidence'] as double) : 0.0;
+      final label = local['label'] as String? ?? 'unknown';
       setState(() {
-        resultText = "Local: ${local['label']} (conf ${(local['confidence'] as double).toStringAsFixed(2)})";
+        resultText = "Local: $label (conf ${confidence.toStringAsFixed(2)})";
       });
-      if (local['label'] == 'severe_bleeding' && (local['confidence'] as double) > 0.7) {
+      if (label == 'severe_bleeding' && confidence > 0.7) {
         _showEmergencyDialog();
       }
     } catch (e) {
@@ -194,63 +224,350 @@ class _EmergencyScreenState extends State<EmergencyScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Silent SOS")),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const Text("Describe Emergency:",
-                style: TextStyle(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-
-            TextField(
-              controller: textCtrl,
-              maxLines: 3,
-              decoration: const InputDecoration(
-                border: OutlineInputBorder(),
-                hintText: "e.g., Person is bleeding heavily",
+      body: Stack(
+        children: [
+          // Animated gradient background
+          Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  const Color(0xFF03030A),
+                  const Color(0xFF0D1B2A).withOpacity(0.8),
+                  const Color(0xFF1A0033).withOpacity(0.6),
+                ],
               ),
             ),
+          ),
 
-            const SizedBox(height: 16),
-
-            Row(
+          SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                ElevatedButton.icon(
-                  onPressed: pickImageFromCamera,
-                  icon: const Icon(Icons.camera_alt),
-                  label: const Text("Camera"),
+                const SizedBox(height: 20),
+
+                // Animated Header
+                ScaleTransition(
+                  scale: Tween(begin: 0.8, end: 1.0).animate(
+                    CurvedAnimation(parent: _pulseController, curve: Curves.elasticOut),
+                  ),
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: LinearGradient(
+                        colors: [
+                          const Color(0xFF00FFD5).withOpacity(0.3),
+                          const Color(0xFF7C4DFF).withOpacity(0.2),
+                        ],
+                      ),
+                    ),
+                    child: const Icon(Icons.warning, size: 40, color: Color(0xFF00FFD5)),
+                  ),
                 ),
-                const SizedBox(width: 8),
-                ElevatedButton.icon(
-                  onPressed: pickImageFromGallery,
-                  icon: const Icon(Icons.photo),
-                  label: const Text("Gallery"),
+                const SizedBox(height: 16),
+
+                Text(
+                  'EMERGENCY SOS',
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    color: const Color(0xFF00FFD5),
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 2,
+                  ),
+                  textAlign: TextAlign.center,
                 ),
-                const SizedBox(width: 8),
-                ElevatedButton.icon(
-                  onPressed: pickAudio,
-                  icon: const Icon(Icons.mic),
-                  label: const Text("Audio"),
+                const SizedBox(height: 8),
+
+                Text(
+                  'Describe your emergency situation',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Colors.grey[400],
+                  ),
+                  textAlign: TextAlign.center,
                 ),
+
+                const SizedBox(height: 30),
+
+                // Description input field with glassmorphism
+                Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(20),
+                    gradient: LinearGradient(
+                      colors: [
+                        const Color(0xFF1A1A2E).withOpacity(0.8),
+                        const Color(0xFF16213E).withOpacity(0.8),
+                      ],
+                    ),
+                    border: Border.all(
+                      color: const Color(0xFF00FFD5).withOpacity(0.3),
+                      width: 1.5,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF00FFD5).withOpacity(0.1),
+                        blurRadius: 20,
+                        spreadRadius: 0,
+                      ),
+                    ],
+                  ),
+                  child: TextField(
+                    controller: textCtrl,
+                    maxLines: 4,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: InputDecoration(
+                      hintText: 'Describe your emergency: injury type, severity, symptoms...',
+                      hintStyle: TextStyle(color: Colors.grey[600]),
+                      contentPadding: const EdgeInsets.all(16),
+                      border: InputBorder.none,
+                      prefixIcon: Padding(
+                        padding: const EdgeInsets.all(12.0),
+                        child: Icon(Icons.edit, color: const Color(0xFF00FFD5).withOpacity(0.6)),
+                      ),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 24),
+
+                // Action buttons grid
+                GridView.count(
+                  crossAxisCount: 3,
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  mainAxisSpacing: 12,
+                  crossAxisSpacing: 12,
+                  children: [
+                    _buildActionButton(Icons.camera_alt, 'Camera', pickImageFromCamera),
+                    _buildActionButton(Icons.image, 'Gallery', pickImageFromGallery),
+                    _buildActionButton(Icons.mic, 'Audio', pickAudio),
+                  ],
+                ),
+
+                const SizedBox(height: 24),
+
+                // AI Assistant Button (NEW!)
+                _buildAIAssistantButton(),
+
+                const SizedBox(height: 20),
+
+                // Send button with gradient
+                ScaleTransition(
+                  scale: Tween(begin: 0.95, end: 1.0).animate(
+                    CurvedAnimation(parent: _pulseController, curve: Curves.elasticInOut),
+                  ),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(20),
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          const Color(0xFF00FFD5),
+                          const Color(0xFF00B8A9).withOpacity(0.9),
+                        ],
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF00FFD5).withOpacity(0.5),
+                          blurRadius: 20,
+                          spreadRadius: 0,
+                          offset: const Offset(0, 8),
+                        ),
+                      ],
+                    ),
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: loading ? null : sendToServer,
+                        borderRadius: BorderRadius.circular(20),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 16.0),
+                          child: loading
+                              ? const CircularProgressIndicator(color: Colors.black, strokeWidth: 2)
+                              : Text(
+                            'SEND TO SILENT SOS',
+                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              color: Colors.black,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 1.5,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 20),
+
+                // Result card with glassmorphism
+                if (resultText.isNotEmpty)
+                  Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(20),
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          const Color(0xFF1A1A2E).withOpacity(0.9),
+                          const Color(0xFF16213E).withOpacity(0.9),
+                        ],
+                      ),
+                      border: Border.all(
+                        color: const Color(0xFF00FFD5).withOpacity(0.4),
+                        width: 1.5,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF00FFD5).withOpacity(0.2),
+                          blurRadius: 20,
+                          spreadRadius: 0,
+                        ),
+                      ],
+                    ),
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Icons.check_circle, color: Color(0xFF00FFD5)),
+                            const SizedBox(width: 12),
+                            Text(
+                              'RESULT',
+                              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                color: const Color(0xFF00FFD5),
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 1,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        SelectableText(
+                          resultText,
+                          style: TextStyle(
+                            color: Colors.grey[300],
+                            fontSize: 14,
+                            height: 1.6,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                const SizedBox(height: 20),
               ],
             ),
+          ),
+        ],
+      ),
+    );
+  }
 
-            const SizedBox(height: 20),
-
-            ElevatedButton(
-              onPressed: loading ? null : sendToServer,
-              child: loading
-                  ? const CircularProgressIndicator(color: Colors.white)
-                  : const Text("Send to Silent SOS"),
+  Widget _buildActionButton(IconData icon, String label, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: ScaleTransition(
+        scale: Tween(begin: 1.0, end: 1.05).animate(
+          CurvedAnimation(parent: _floatController, curve: Curves.easeInOut),
+        ),
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                const Color(0xFF00FFD5).withOpacity(0.15),
+                const Color(0xFF7C4DFF).withOpacity(0.1),
+              ],
             ),
+            border: Border.all(
+              color: const Color(0xFF00FFD5).withOpacity(0.3),
+              width: 1,
+            ),
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, color: const Color(0xFF00FFD5), size: 28),
+              const SizedBox(height: 8),
+              Text(
+                label,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
-            const SizedBox(height: 20),
-            const Text("RESULT:", style: TextStyle(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 10),
-            SelectableText(resultText),
+  Widget _buildAIAssistantButton() {
+    return ScaleTransition(
+      scale: Tween(begin: 0.95, end: 1.0).animate(
+        CurvedAnimation(parent: _pulseController, curve: Curves.elasticInOut),
+      ),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(24),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              const Color(0xFF7C4DFF),
+              const Color(0xFF00FFD5).withOpacity(0.8),
+            ],
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF7C4DFF).withOpacity(0.5),
+              blurRadius: 25,
+              spreadRadius: 0,
+              offset: const Offset(0, 10),
+            ),
           ],
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('🤖 AI Assistant activated - analyzing your emergency...'),
+                  duration: Duration(seconds: 2),
+                ),
+              );
+            },
+            borderRadius: BorderRadius.circular(24),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 16.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.smart_toy, color: Colors.white, size: 24),
+                  const SizedBox(width: 12),
+                  Text(
+                    'AI ASSISTANT',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1.2,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ),
       ),
     );

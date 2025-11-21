@@ -15,7 +15,8 @@ RUN pip install --upgrade pip && \
 
 # Copy application code
 COPY server.py .
-COPY models/ models/
+COPY stt_multilang.py .
+COPY .env* ./
 
 # Set environment variables for Whisper
 ENV WHISPER_MODEL=large-v2
