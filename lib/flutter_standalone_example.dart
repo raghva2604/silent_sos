@@ -1,11 +1,14 @@
 // Single-file Flutter example: recorder + image picker + send to backend
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:record/record.dart';
 import 'package:path_provider/path_provider.dart';
 import 'services/api.dart';
 import 'package:silent_sos/config.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:flutter_sound/flutter_sound.dart';
+
+
 
 void main() => runApp(const MyApp());
 
@@ -22,7 +25,8 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  final recorder = Record();
+  // Use the project's preferred recorder implementation (flutter_sound).
+  final FlutterSoundRecorder recorder = FlutterSoundRecorder();
   String status = '';
   File? lastAudio;
   File? lastImage;
@@ -35,22 +39,36 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> start() async {
-    if (await recorder.hasPermission()) {
-      final p = await _getFilePath();
-      await recorder.start(path: p, encoder: AudioEncoder.wav, bitRate: 128000, samplingRate: 16000);
-      setState(() => status = 'Recording...');
-    } else {
+    final mic = await Permission.microphone.request();
+    if (mic != PermissionStatus.granted) {
       setState(() => status = 'No mic permission');
+      return;
+    }
+
+    try {
+      await recorder.openRecorder();
+      final p = await _getFilePath();
+      await recorder.startRecorder(toFile: p, codec: Codec.aacMP4);
+      setState(() => status = 'Recording...');
+    } catch (e) {
+      setState(() => status = 'Record start error: $e');
     }
   }
 
   Future<void> stop() async {
-    final p = await recorder.stop();
-    if (p != null) {
-      setState(() {
-        lastAudio = File(p);
-        status = 'Stopped. File: ${lastAudio!.path}';
-      });
+    try {
+      final p = await recorder.stopRecorder();
+      if (p != null) {
+        setState(() {
+          lastAudio = File(p);
+          status = 'Stopped. File: ${lastAudio!.path}';
+        });
+      }
+      try {
+        await recorder.closeRecorder();
+      } catch (_) {}
+    } catch (e) {
+      setState(() => status = 'Record stop error: $e');
     }
   }
 

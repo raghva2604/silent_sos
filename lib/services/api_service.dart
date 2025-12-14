@@ -2,10 +2,11 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:http/http.dart' as http;
+import '../config.dart';
 
 class ApiService {
-  // change for your environment
-  static const String baseUrl = "http://127.0.0.1:8000/api/v1";
+  // choose base URL according to platform; use Config values so they are easy to change
+  String get _baseUrl => kIsWeb ? Config.baseUrlWeb : Config.baseUrlEmulator;
 
   /// imageFile / audioFile are normal dart:io File on mobile/desktop.
   /// On web, imageFile should be an XFile or picked file that supports readAsBytes().
@@ -16,7 +17,7 @@ class ApiService {
     String langHint = "auto",
     bool deviceOffline = false,
   }) async {
-    final uri = Uri.parse("$baseUrl/analyze");
+    final uri = Uri.parse("$_baseUrl/analyze");
 
     // --- Web path: send JSON with base64-encoded files ---
     if (kIsWeb) {
@@ -43,7 +44,7 @@ class ApiService {
         if (audioB64 != null) 'audio_b64': audioB64,
       };
 
-      final resp = await http.post(uri,
+        final resp = await http.post(uri,
           headers: {'Content-Type': 'application/json'},
           body: jsonEncode(body));
 
@@ -92,7 +93,7 @@ class ApiService {
     String langHint = "auto",
     bool deviceOffline = false,
   }) async {
-    final uri = Uri.parse("$baseUrl/transcribe_and_analyze");
+    final uri = Uri.parse("$_baseUrl/transcribe_and_analyze");
 
     if (kIsWeb) {
       String? imageB64;

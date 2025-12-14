@@ -96,10 +96,12 @@ class _ContactPickerScreenState extends State<ContactPickerScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Select Contacts'),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        title: const Text('Emergency Contacts', style: TextStyle(fontWeight: FontWeight.w800, letterSpacing: 1)),
         actions: [
           IconButton(
-            icon: const Icon(Icons.select_all),
+            icon: const Icon(Icons.select_all, color: Colors.teal),
             tooltip: 'Select All',
             onPressed: () {
               setState(() {
@@ -108,21 +110,19 @@ class _ContactPickerScreenState extends State<ContactPickerScreen> {
                   _selectedNumbers = all;
                 } else {
                   _selectedNumbers = all.sublist(0, _maxSelections);
-                  // notify user that only first N were selected
                   ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Selected first $_maxSelections contacts')));
                 }
               });
             },
           ),
           IconButton(
-            icon: const Icon(Icons.refresh),
+            icon: const Icon(Icons.refresh, color: Colors.teal),
             tooltip: 'Refresh',
             onPressed: _loadContacts,
           ),
           IconButton(
-            icon: const Icon(Icons.check),
+            icon: const Icon(Icons.check_circle, color: Colors.green),
             onPressed: () async {
-              // Persist selection
               final nav = Navigator.of(context);
               try {
                 final prefs = await SharedPreferences.getInstance();
@@ -138,34 +138,33 @@ class _ContactPickerScreenState extends State<ContactPickerScreen> {
       ),
       body: Column(
         children: [
-          // Helper text and remaining counter
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
+            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
             child: Row(
               children: [
                 Expanded(
                   child: Text(
-                    'You can select up to $_maxSelections contacts.',
-                    style: TextStyle(fontSize: 14, color: Colors.grey[700]),
+                    'Select up to $_maxSelections contacts.',
+                    style: const TextStyle(fontSize: 13, color: Colors.black54, fontWeight: FontWeight.w500),
                   ),
                 ),
                 const SizedBox(width: 8),
                 Builder(builder: (ctx) {
                   final remaining = (_maxSelections - _selectedNumbers.length).clamp(0, _maxSelections);
                   final reached = remaining == 0;
-                  return Tooltip(
-                    message: reached ? 'Selection limit reached' : '$remaining selections remaining',
-                    child: AnimatedScale(
-                      scale: reached ? 1.08 : 1.0,
-                      duration: const Duration(milliseconds: 240),
-                      curve: Curves.easeInOut,
-                      child: Chip(
-                        backgroundColor: reached ? Colors.red.shade100 : Colors.green.shade50,
-                        avatar: CircleAvatar(
-                          backgroundColor: reached ? Colors.red : Colors.green,
-                          child: Text(remaining.toString(), style: const TextStyle(color: Colors.white, fontSize: 12)),
-                        ),
-                        label: Text(reached ? 'Max' : 'Remaining', style: TextStyle(color: reached ? Colors.red.shade700 : Colors.green.shade800)),
+                  return Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: reached ? Colors.red.withAlpha(30) : Colors.teal.withAlpha(30),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: reached ? Colors.red.withAlpha(100) : Colors.teal.withAlpha(100)),
+                    ),
+                    child: Text(
+                      reached ? 'Max Reached' : '$remaining remaining',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: reached ? Colors.red : Colors.teal,
                       ),
                     ),
                   );
@@ -174,60 +173,92 @@ class _ContactPickerScreenState extends State<ContactPickerScreen> {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.all(8.0),
+            padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
             child: TextField(
-              decoration: const InputDecoration(prefixIcon: Icon(Icons.search), hintText: 'Search contacts...'),
+              decoration: InputDecoration(
+                prefixIcon: const Icon(Icons.search, color: Colors.teal),
+                hintText: 'Search contacts...',
+                hintStyle: const TextStyle(color: Colors.black54),
+                filled: true,
+                fillColor: Colors.grey[200],
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide(color: Colors.teal.withAlpha(80)),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide(color: Colors.teal.withAlpha(60)),
+                ),
+              ),
+              style: const TextStyle(color: Colors.black87),
               onChanged: (v) => setState(() => _search = v.trim().toLowerCase()),
             ),
           ),
           Expanded(child: _buildBody()),
           if (_selectedNumbers.isNotEmpty)
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 10),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      icon: const Icon(Icons.sms),
-                      label: const Text('Test SMS'),
-                      onPressed: () async {
-                        final to = _selectedNumbers.first;
-                        final uri = Uri(scheme: 'sms', path: to, queryParameters: {'body': 'Test message from SilentSOS'});
-                        try {
-                          if (await canLaunchUrl(uri)) await launchUrl(uri);
-                        } catch (e) {
-                          debugPrint('Could not launch SMS: $e');
-                        }
-                      },
-                    ),
-                  ),
-                ],
+              padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 12),
+              child: ElevatedButton.icon(
+                icon: const Icon(Icons.sms),
+                label: const Text('Test SMS to First Contact'),
+                onPressed: () async {
+                  final to = _selectedNumbers.first;
+                  final uri = Uri(scheme: 'sms', path: to, queryParameters: {'body': 'Test message from SilentSOS'});
+                  try {
+                    if (await canLaunchUrl(uri)) await launchUrl(uri);
+                  } catch (e) {
+                    debugPrint('Could not launch SMS: $e');
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.teal.shade700,
+                  minimumSize: const Size(double.infinity, 50),
+                ),
               ),
             ),
-        ],
+          ],
       ),
     );
   }
 
   Widget _buildBody() {
-  if (_loading) return const Center(child: CircularProgressIndicator());
+    if (_loading) {
+      return const Center(
+        child: CircularProgressIndicator(),
+      );
+    }
 
-  if (_permissionStatus == null) return const Center(child: CircularProgressIndicator());
+    if (_permissionStatus == null) {
+      return const Center(
+        child: CircularProgressIndicator(),
+      );
+    }
 
     if (_permissionStatus!.isDenied || _permissionStatus!.isPermanentlyDenied) {
-      return const Center(
+      return Center(
         child: Padding(
-          padding: EdgeInsets.all(20),
+          padding: const EdgeInsets.all(24),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.block, size: 60, color: Colors.red),
-              SizedBox(height: 20),
-              Text("Permission Required", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              SizedBox(height: 10),
-              Text("This app needs contact access to select emergency contacts. Please grant permission in your device settings.", textAlign: TextAlign.center),
-              SizedBox(height: 20),
-              // ElevatedButton cannot be const because callback is non-const
+              const Icon(Icons.block, size: 64, color: Colors.red),
+              const SizedBox(height: 20),
+              const Text("Permission Required", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 12),
+              const Text(
+                "This app needs contact access to select emergency contacts. Please grant permission in your device settings.",
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.black54),
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: () => openAppSettings(),
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.teal.shade700),
+                child: const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  child: Text('Open Settings', style: TextStyle(color: Colors.white)),
+                ),
+              ),
             ],
           ),
         ),
@@ -237,33 +268,40 @@ class _ContactPickerScreenState extends State<ContactPickerScreen> {
     if (_contacts.isEmpty) {
       return Center(
         child: Padding(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.all(24),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text('No contacts with phone numbers found on this device.', textAlign: TextAlign.center),
-              const SizedBox(height: 12),
-              ElevatedButton(
+              const Icon(Icons.contacts_outlined, size: 64, color: Colors.teal),
+              const SizedBox(height: 20),
+              const Text(
+                'No contacts with phone numbers found on this device.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 20),
+              ElevatedButton.icon(
                 onPressed: () {
-                  // Provide test contacts for emulators or devices without contacts
                   final test = ['+15551234567', '+15557654321'];
                   Navigator.pop(context, test);
                 },
-                child: const Text('Use Test Contacts'),
+                icon: const Icon(Icons.add),
+                label: const Text('Use Test Contacts'),
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.teal.shade700),
               ),
-              const SizedBox(height: 8),
-              ElevatedButton(
+              const SizedBox(height: 10),
+              ElevatedButton.icon(
                 onPressed: _loadContacts,
-                child: const Text('Refresh Contacts'),
+                icon: const Icon(Icons.refresh),
+                label: const Text('Refresh Contacts'),
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.teal.shade800),
               ),
-              const SizedBox(height: 8),
-              TextButton(onPressed: _loadContacts, child: const Text('Retry')),
             ],
           ),
         ),
       );
     }
-    
+
     return ListView.builder(
       itemCount: _contacts.length,
       itemBuilder: (context, index) {
@@ -271,7 +309,6 @@ class _ContactPickerScreenState extends State<ContactPickerScreen> {
         final number = contact.phones.isNotEmpty ? _normalizeNumber(contact.phones.first.number) : '';
         final isSelected = _selectedNumbers.contains(number) && number.isNotEmpty;
 
-        // If a search filter is active, skip items that don't match
         if (_search.isNotEmpty) {
           final lower = contact.displayName.toLowerCase();
           if (!lower.contains(_search) && !number.contains(_search)) {
@@ -280,40 +317,58 @@ class _ContactPickerScreenState extends State<ContactPickerScreen> {
         }
 
         final canToggle = isSelected || _selectedNumbers.length < _maxSelections;
-        return CheckboxListTile(
-          title: Text(
-            contact.displayName,
-            style: TextStyle(color: (!canToggle && !isSelected) ? Colors.grey : null),
-          ),
-          subtitle: Text(number.isNotEmpty ? number : 'No number', style: TextStyle(color: (!canToggle && !isSelected) ? Colors.grey : null)),
-          value: isSelected,
-          onChanged: canToggle
-              ? (val) {
-                  setState(() {
-                    if (val == true && number.isNotEmpty) {
-                      if (!_selectedNumbers.contains(number)) {
-                        if (_selectedNumbers.length >= _maxSelections) {
-                          // enforce max selection
-                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('You can select up to $_maxSelections contacts only')));
-                          return;
-                        }
-                        _selectedNumbers.add(number);
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4),
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(8),
+              boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 4, offset: const Offset(0, 2))],
+            ),
+            child: CheckboxListTile(
+              title: Text(
+                contact.displayName,
+                style: TextStyle(
+                  color: (!canToggle && !isSelected) ? Colors.black26 : Colors.black87,
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                ),
+              ),
+              subtitle: Text(
+                number.isNotEmpty ? number : 'No number',
+                style: TextStyle(color: (!canToggle && !isSelected) ? Colors.black26 : Colors.black54, fontSize: 12),
+              ),
+              value: isSelected,
+              activeColor: Colors.teal,
+              checkColor: Colors.white,
+              onChanged: canToggle
+                  ? (val) {
+                        setState(() {
+                          if (val == true && number.isNotEmpty) {
+                            if (!_selectedNumbers.contains(number)) {
+                              if (_selectedNumbers.length >= _maxSelections) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text('You can select up to $_maxSelections contacts only')),
+                                );
+                                return;
+                              }
+                              _selectedNumbers.add(number);
+                            }
+                          } else {
+                            _selectedNumbers.remove(number);
+                          }
+                          _contacts.sort((a, b) {
+                            final aNum = a.phones.isNotEmpty ? _normalizeNumber(a.phones.first.number) : '';
+                            final bNum = b.phones.isNotEmpty ? _normalizeNumber(b.phones.first.number) : '';
+                            final aSelected = _selectedNumbers.contains(aNum) ? 0 : 1;
+                            final bSelected = _selectedNumbers.contains(bNum) ? 0 : 1;
+                            if (aSelected != bSelected) return aSelected - bSelected;
+                            return a.displayName.toLowerCase().compareTo(b.displayName.toLowerCase());
+                          });
+                        });
                       }
-                    } else {
-                      _selectedNumbers.remove(number);
-                    }
-                    // Keep selected contacts at top visually by re-sorting
-                    _contacts.sort((a, b) {
-                      final aNum = a.phones.isNotEmpty ? _normalizeNumber(a.phones.first.number) : '';
-                      final bNum = b.phones.isNotEmpty ? _normalizeNumber(b.phones.first.number) : '';
-                      final aSelected = _selectedNumbers.contains(aNum) ? 0 : 1;
-                      final bSelected = _selectedNumbers.contains(bNum) ? 0 : 1;
-                      if (aSelected != bSelected) return aSelected - bSelected;
-                      return a.displayName.toLowerCase().compareTo(b.displayName.toLowerCase());
-                    });
-                  });
-                }
-              : null,
+                  : null,
+            ),
+          ),
         );
       },
     );

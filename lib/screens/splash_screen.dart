@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'permission_screen.dart';
+import '../widgets/futuristic_header.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -45,6 +46,8 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     final accent = Theme.of(context).colorScheme.secondary;
 
     return Scaffold(
+      // include futuristic header on top of the splash for a consistent brand
+      appBar: const FuturisticHeader(title: 'Silent SOS'),
       body: AnimatedBuilder(
         animation: _ctrl,
         builder: (context, child) {
@@ -88,7 +91,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                     opacity: _ctrl.value.clamp(0.0, 1.0),
                     child: Column(
                       children: [
-                        Text('SilentSOS', style: TextStyle(fontSize: 34, fontWeight: FontWeight.w900, color: Colors.white.withAlpha((0.98 * 255).round()), letterSpacing: 2)),
+                        Text('Silent SOS', style: TextStyle(fontSize: 34, fontWeight: FontWeight.w900, color: Colors.white.withAlpha((0.98 * 255).round()), letterSpacing: 2)),
                         const SizedBox(height: 8),
                         Text('Your silent guardian', style: TextStyle(fontSize: 14, color: Colors.white70.withAlpha(200))),
                       ],

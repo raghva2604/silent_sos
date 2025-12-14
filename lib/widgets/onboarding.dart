@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:silent_sos/widgets/futuristic_button.dart';
+import 'package:silent_sos/src/widgets/neon_widgets.dart';
 import 'package:lottie/lottie.dart';
 
 class OnboardingOverlay extends StatefulWidget {
@@ -73,18 +73,15 @@ class _OnboardingOverlayState extends State<OnboardingOverlay> {
                     padding: const EdgeInsets.all(12.0),
                     child: Row(
                         children: [
-                        FuturisticButton(
-                          onPressed: () { _pc.jumpToPage(0); },
-                          style: FuturisticButtonStyle.secondary,
-                          height: 40,
+                        NeonButton(
+                          onTap: () { _pc.jumpToPage(0); },
                           child: const Text('Back'),
                         ),
                         const Spacer(),
                         Row(children: List.generate(_pages.length, (i) => Container(margin: const EdgeInsets.symmetric(horizontal:4), width: _idx==i?14:8, height:8, decoration: BoxDecoration(color: _idx==i?Colors.white:Colors.white24, borderRadius: BorderRadius.circular(8))))),
                         const Spacer(),
-                        FuturisticButton(
-                          onPressed: _idx == _pages.length - 1 ? _complete : () { _pc.nextPage(duration: const Duration(milliseconds:300), curve: Curves.ease); },
-                          style: FuturisticButtonStyle.primary,
+                        NeonButton(
+                          onTap: _idx == _pages.length - 1 ? _complete : () { _pc.nextPage(duration: const Duration(milliseconds:300), curve: Curves.ease); },
                           child: Text(_idx == _pages.length - 1 ? 'Done' : 'Next'),
                         ),
                       ],

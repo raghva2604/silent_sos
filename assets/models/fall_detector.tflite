@@ -1,0 +1,3 @@
+This is a placeholder file for the TFLite fall detector model.
+Replace this file with a real `fall_detector.tflite` trained model.
+Do NOT commit real credentials or large model files to git; keep them in a secure store.

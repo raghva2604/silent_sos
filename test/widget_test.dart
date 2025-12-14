@@ -12,9 +12,11 @@ import 'package:silent_sos/main.dart';
 void main() {
   testWidgets('App boots and shows title', (WidgetTester tester) async {
     // Build the app and trigger a frame.
-    await tester.pumpWidget(const SilentSOSApp());
+    await tester.pumpWidget(const AppBootstrap());
 
-    // The splash screen shows the app title 'SilentSOS'.
-    expect(find.text('SilentSOS'), findsOneWidget);
+    // The splash screen shows the app title 'Silent SOS'. There may be
+    // multiple widgets that render the title (header + splash), accept
+    // any number of matches but ensure at least one is present.
+    expect(find.text('Silent SOS'), findsWidgets);
   });
 }

@@ -9,13 +9,15 @@ import androidx.core.content.ContextCompat
 
 /**
  * BootReceiver: on BOOT_COMPLETED, check user opt-in and start the ForegroundSensorService
- * only when the user has explicitly opted in via the Flutter UI (key: "auto_send_opt_in").
+ * and/or HotwordService based on user preferences.
  */
 class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         try {
             if (intent.action == Intent.ACTION_BOOT_COMPLETED) {
                 val prefs: SharedPreferences = context.getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE)
+                
+                // Auto-start ForegroundSensorService if user opted in
                 val optedIn = prefs.getBoolean("auto_send_opt_in", false)
                 if (optedIn) {
                     try {
@@ -29,8 +31,22 @@ class BootReceiver : BroadcastReceiver() {
                     } catch (e: Exception) {
                         android.util.Log.w("BootReceiver", "Failed to start ForegroundSensorService on boot: ${e.localizedMessage}")
                     }
-                } else {
-                    android.util.Log.i("BootReceiver", "auto_send_opt_in not enabled; skipping auto-start on boot")
+                }
+                
+                // Auto-start HotwordService if user enabled it
+                val hotwordEnabled = prefs.getBoolean("flutter.hotword_service_enabled", false)
+                if (hotwordEnabled) {
+                    try {
+                        val hotwordIntent = Intent(context, HotwordService::class.java)
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                            ContextCompat.startForegroundService(context, hotwordIntent)
+                        } else {
+                            context.startService(hotwordIntent)
+                        }
+                        android.util.Log.i("BootReceiver", "HotwordService auto-started on boot")
+                    } catch (e: Exception) {
+                        android.util.Log.w("BootReceiver", "Failed to start HotwordService on boot: ${e.localizedMessage}")
+                    }
                 }
             }
         } catch (e: Exception) {

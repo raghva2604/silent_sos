@@ -10,9 +10,10 @@ dependencies:
   flutter:
     sdk: flutter
 
-  # Using flexible caret versions to ensure compatibility
-  firebase_core: ^4.2.0
+  # Firebase packages pinned for compatibility with other plugins
+  firebase_core: ^4.2.1
   firebase_crashlytics: ^5.0.3
+  provider: ^6.1.5
   permission_handler: ^12.0.1
   geolocator: ^14.0.2
   flutter_contacts: ^1.1.7+1
@@ -22,11 +23,11 @@ dependencies:
   # bumped to a newer major version to be compatible with recent Android Gradle Plugin
   # (fixes missing namespace issues in older versions)
   flutter_foreground_task: ^9.1.0
-  url_launcher: ^6.2.5
-  shared_preferences: ^2.2.2
+  url_launcher: ^6.1.7
+  shared_preferences: ^2.0.15
   flutter_local_notifications: ^19.5.0
   google_maps_flutter: ^2.6.1
-  camera: ^0.10.0+5
+  camera: ^0.11.3
   path_provider: ^2.0.15
   path: ^1.8.2
   # bumped to a newer version compatible with firebase_core ^4.x series
@@ -34,16 +35,18 @@ dependencies:
   firebase_auth: ^6.1.2
   share_plus: ^12.0.1
   http: ^1.1.0
-  record: ^4.4.0
-  image_picker: ^0.8.7+5
+  record: ^6.1.2
+  image_picker: ^1.2.1
+  cloud_firestore: ^6.1.0
+  fluttertoast: ^9.0.0
   # Upgrade file_picker to a modern v2-embedding compatible release to avoid v1 Registrar
   # compilation errors during Android builds.
   file_picker: ^10.3.3
-  # TFLite model inference support
-  tflite_flutter: ^0.9.0
-  image: ^3.0.2
+  # TFLite model inference support (upgraded to latest stable version with v2 embedding support)
+  tflite_flutter: ^0.12.0
+  image: ^4.5.4
   # Lottie animations for onboarding and SOS animations
-  lottie: ^2.4.2
+  lottie: ^3.3.2
   # Speech-to-text for push-to-talk MVP
   speech_to_text: ^7.3.0
   flutter_sound: ^9.2.13
@@ -55,6 +58,8 @@ dependencies:
   # available.
   # Schedule headless background Dart tasks (WorkManager)
   workmanager: ^0.9.0+3
+  # Connectivity checking for offline-first AI
+  connectivity_plus: ^5.0.0
   # Coachmark / showcase for per-element tutorials
   # (coachmark package intentionally omitted to avoid version resolution issues during this pass)
   # FFmpeg disabled in this build due to native artifact availability; mergeVideos
@@ -66,11 +71,22 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
+  test: ^1.24.0
 
 flutter:
   uses-material-design: true
   
   assets:
     - assets/models/injury_detector.tflite
+    - assets/models/severity.tflite
+    - assets/models/model.tflite
+    - assets/models/fall_detector.tflite
     - assets/models/labels.txt
+    - assets/images/splash.jpg
+    - assets/images/home.jpg
+    - assets/images/permissions.jpg
+    - assets/ui/ai_assistant.png
+    - assets/ui/upload_result.png
+    - assets/ui/contacts_map.png
+    - assets/ui/push_to_talk.png
 

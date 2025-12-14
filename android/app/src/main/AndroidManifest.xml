@@ -41,9 +41,13 @@
         tools:ignore="SmsAndCallLogPolicy,SystemPermissionTypo" />
 
     <application
-        android:label="silent_sos"
+        android:label="silent sos"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
+        <!-- Google Maps API Key for google_maps_flutter -->
+        <meta-data
+            android:name="com.google.android.geo.API_KEY"
+            android:value="YOUR_GOOGLE_MAPS_API_KEY" />
         <!-- FileProvider to serve local media files to the Telephony/MMS APIs when sending
              multimedia messages silently. We expose cache/, files/, and external storage
              paths. The authority is <applicationId>.fileprovider and the paths are
@@ -99,6 +103,12 @@
         android:enabled="true"
         android:exported="false"
         android:foregroundServiceType="microphone" />
+    <service android:name=".HotwordService" android:exported="false" />
+    <service
+        android:name=".ImageDangerDetectionService"
+        android:enabled="true"
+        android:exported="false"
+        android:foregroundServiceType="camera" />
     <receiver android:name=".BootReceiver" android:enabled="true" android:exported="false">
         <intent-filter>
             <action android:name="android.intent.action.BOOT_COMPLETED" />

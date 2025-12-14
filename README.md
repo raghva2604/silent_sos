@@ -30,43 +30,9 @@ npm test
 
 ## Usage
 
-### Command Line
+This project no longer includes the Node-based Emergency AI client. The repository now uses a local TensorFlow model for training and inference (integrated into the app or separate training scripts).
 
-# Interactive CLI
-npm run cli
-
-# Run tests
-npm test
-
-# Health check
-npm run health
-
-### In Code
-
-```js
-const EmergencyAIClient = require('./src/emergency-ai-client');
-
-const client = new EmergencyAIClient();
-
-// Send emergency
-const response = await client.sendEmergency(
-	'Person collapsed, not breathing',
-	{
-		language: 'en',
-		location: 'Office, 3rd floor'
-	}
-);
-
-console.log(response);
-```
-
-### VS Code Tasks
-
-Press Ctrl+Shift+P → "Tasks: Run Task" → Select:
-
-Emergency AI: Run Tests
-Emergency AI: Health Check
-Emergency AI: Quick Test
+If you have TensorFlow training or inference scripts, place them under `src/tf/` or add a new `scripts/` entry and document usage here. Remove any remaining references to the old Node CLI or tests.
 
 ## Supported Languages
 
@@ -115,34 +81,8 @@ Check webhook URL is correct
 
 ---
 
-## ✅ **FINAL STEP: Test Everything!**
+## Testing & Running
 
-### **In VS Code Terminal:**
+Node-based CLI, tests and health-check were removed because this project now uses a local TensorFlow model. To run model training or inference, add your TensorFlow scripts under `src/tf/` and document commands here (for example: `node src/tf/train.js` or `python src/tf/train.py`).
 
-```bash
-# 1. Run health check
-npm run health
-
-# 2. Run full test suite
-npm test
-
-# 3. Try interactive CLI
-npm run cli
-```
-
-Or use VS Code Tasks:
-Press Ctrl+Shift+P (or Cmd+Shift+P on Mac)
-Type "Tasks: Run Task"
-Select "Emergency AI: Run Tests"
-
-🎯 What You Can Do Now:
-Test from Terminal: npm test
-
-Interactive Mode: npm run cli
-
-Use in Your Code:
-
-const EmergencyAIClient = require('./src/emergency-ai-client');
-const client = new EmergencyAIClient();
-const response = await client.sendEmergency('Emergency!', {language: 'en'});
-Create VS Code Extension (optional - let me know if you want this!)
+If you want, I can scaffold a small TF training/inference script and add simple run/test tasks.

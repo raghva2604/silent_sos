@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:silent_sos/widgets/futuristic_button.dart';
+import 'package:silent_sos/src/widgets/neon_widgets.dart';
 
 class TutorialStep {
   final GlobalKey targetKey;
@@ -111,12 +111,12 @@ class _Bubble extends StatelessWidget {
             const SizedBox(height: 8),
             Text(description, style: const TextStyle(color: Colors.white70)),
             const SizedBox(height: 12),
-            Row(
+                Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                FuturisticButton(onPressed: onSkip, style: FuturisticButtonStyle.secondary, height: 36, child: const Text('Skip')),
+                NeonButton(onTap: onSkip, child: const Text('Skip')),
                 const SizedBox(width: 8),
-                FuturisticButton(onPressed: onNext, style: FuturisticButtonStyle.primary, height: 36, child: Text(isLast ? 'Finish' : 'Next')),
+                NeonButton(onTap: onNext, child: Text(isLast ? 'Finish' : 'Next')),
               ],
             )
           ],

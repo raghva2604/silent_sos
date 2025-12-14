@@ -1,0 +1,2 @@
+Using SMTP host smtp.gmail.com
+SilentSOS backend listening on 3000

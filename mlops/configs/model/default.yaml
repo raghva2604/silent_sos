@@ -1,0 +1,3 @@
+name: fusion
+lr: 1e-3
+hidden: 16

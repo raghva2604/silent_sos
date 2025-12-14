@@ -83,4 +83,29 @@ dependencies {
     // Required for core library desugaring used by some Android AARs (e.g., flutter_local_notifications)
     // Updated to 2.1.4+ to satisfy AAR metadata requirements (see Flutter plugin errors)
     add("coreLibraryDesugaring", "com.android.tools:desugar_jdk_libs:2.1.4")
+    // Vosk offline speech recognition (AAR from Maven Central)
+    implementation("com.alphacephei:vosk-android:0.3.38")
+    // OkHttp for HTTP upload/download in ForegroundRecordingService
+    implementation("com.squareup.okhttp3:okhttp:4.11.0")
+    // Location services used by SosForegroundService for live location updates
+    implementation("com.google.android.gms:play-services-location:21.0.1")
+
+    // Coroutines and lifecycle runtime needed for coroutine-based downloads and lifecycleScope
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
+    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.6.2")
+    
+    // CameraX dependencies for native camera integration
+    implementation("androidx.camera:camera-core:1.3.0")
+    implementation("androidx.camera:camera-camera2:1.3.0")
+    implementation("androidx.camera:camera-lifecycle:1.3.0")
+    implementation("androidx.camera:camera-view:1.3.0")
+    
+    // WorkManager for background upload tasks
+    implementation("androidx.work:work-runtime-ktx:2.8.1")
+    
+    // Lottie for animations
+    implementation("com.airbnb.android:lottie:6.1.0")
+    
+    // Google Guava for CameraX ListenableFuture
+    implementation("com.google.guava:guava:31.1-android")
 }

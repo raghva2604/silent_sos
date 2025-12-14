@@ -1,10 +1,6 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:permission_handler/permission_handler.dart';
-import 'package:url_launcher/url_launcher.dart';
-import '../services/poi_service.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 class MapScreen extends StatefulWidget {
   const MapScreen({super.key});
@@ -14,151 +10,48 @@ class MapScreen extends StatefulWidget {
 }
 
 class _MapScreenState extends State<MapScreen> {
-  final Completer<GoogleMapController> _controller = Completer();
   Position? _currentPosition;
-  bool _locationPermissionGranted = false;
-  String? _nearestCivilization;
-  String? _nearestTransport;
-
-  static const CameraPosition _initialPosition = CameraPosition(
-    target: LatLng(12.9716, 77.5946), // Default to Bangalore
-    zoom: 14.0,
-  );
-
-  final Set<Marker> _markers = {};
-  bool _isLoading = true;
+  bool _loading = true;
+  String? _error;
 
   @override
   void initState() {
     super.initState();
-    _checkPermissionAndInit();
+    _loadLocation();
   }
 
-  Future<void> _checkPermissionAndInit() async {
+  Future<void> _loadLocation() async {
     try {
-      final status = await Permission.location.status;
-      if (!status.isGranted) {
-        final newStatus = await Permission.location.request();
-        if (!newStatus.isGranted) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Location permission is required to show the map.')));
-          }
-          setState(() => _locationPermissionGranted = false);
+      setState(() => _loading = true);
+      final permission = await Geolocator.checkPermission();
+      
+      if (permission == LocationPermission.denied) {
+        final requested = await Geolocator.requestPermission();
+        if (requested != LocationPermission.whileInUse && requested != LocationPermission.always) {
+          setState(() {
+            _error = 'Location permission denied';
+            _loading = false;
+          });
           return;
         }
       }
-      setState(() => _locationPermissionGranted = true);
-      await _getUserLocation();
-    } catch (e) {
-      debugPrint('Location permission check failed: $e');
-    }
-  }
 
-  Future<void> _getUserLocation() async {
-    try {
-      // Use LocationSettings per new Geolocator API to avoid deprecated param
-      _currentPosition = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
+      final position = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+          timeLimit: Duration(seconds: 10),
+        ),
       );
-      if (_currentPosition == null) return;
-
-      final newPosition = LatLng(_currentPosition!.latitude, _currentPosition!.longitude);
-
-      final GoogleMapController controller = await _controller.future;
-      controller.animateCamera(CameraUpdate.newCameraPosition(
-        CameraPosition(target: newPosition, zoom: 16.0),
-      ));
 
       setState(() {
-        _markers.add(
-          Marker(
-            markerId: const MarkerId('currentLocation'),
-            position: newPosition,
-            infoWindow: const InfoWindow(title: 'My Location'),
-            icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure),
-          ),
-        );
-        _isLoading = false;
+        _currentPosition = position;
+        _loading = false;
       });
-
-      // Fetch nearby POI info (non-blocking, best-effort)
-      try {
-        final civ = await POIService.nearestCivilization(newPosition.latitude, newPosition.longitude);
-        final trans = await POIService.nearestTransport(newPosition.latitude, newPosition.longitude);
-        setState(() {
-          _nearestCivilization = civ.isNotEmpty ? civ : null;
-          _nearestTransport = trans.isNotEmpty ? trans : null;
-        });
-      } catch (e) {
-        debugPrint('POI lookup failed: $e');
-      }
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not get location: $e')),
-        );
-        setState(() {
-          _isLoading = false;
-        });
-      }
-    }
-  }
-
-  Future<void> _findCivilization() async {
-    if (_currentPosition == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Still waiting for location...')),
-      );
-      return;
-    }
-
-    // A broad search query to find signs of civilization
-    const searchQuery = 'gas station OR store OR town OR village OR cafe OR restaurant';
-    final query = Uri.encodeComponent(searchQuery);
-    final lat = _currentPosition!.latitude;
-    final lon = _currentPosition!.longitude;
-
-    final mapsUrl = Uri.parse(
-      'https://www.google.com/maps/search/?api=1&query=$query&location=$lat,$lon'
-    );
-
-    if (await canLaunchUrl(mapsUrl)) {
-      await launchUrl(mapsUrl, mode: LaunchMode.externalApplication);
-    } else {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not open Google Maps.')),
-        );
-      }
-    }
-  }
-
-  Future<void> _findTransport() async {
-    if (_currentPosition == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Still waiting for location...')),
-      );
-      return;
-    }
-
-    // Broad transport related search: bus/rail/metro/taxi/airport
-    const searchQuery = 'bus station OR train station OR transit station OR metro station OR taxi stand OR airport';
-    final query = Uri.encodeComponent(searchQuery);
-    final lat = _currentPosition!.latitude;
-    final lon = _currentPosition!.longitude;
-
-    final mapsUrl = Uri.parse(
-      'https://www.google.com/maps/search/?api=1&query=$query&location=$lat,$lon'
-    );
-
-    if (await canLaunchUrl(mapsUrl)) {
-      await launchUrl(mapsUrl, mode: LaunchMode.externalApplication);
-    } else {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not open Google Maps.')),
-        );
-      }
+      setState(() {
+        _error = 'Error loading location: $e';
+        _loading = false;
+      });
     }
   }
 
@@ -166,87 +59,145 @@ class _MapScreenState extends State<MapScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('My Location'),
+        title: const Text('Live Location Map'),
+        elevation: 0,
       ),
-      body: _locationPermissionGranted
-          ? Stack(
-              children: [
-                GoogleMap(
-                  mapType: MapType.normal,
-                  initialCameraPosition: _initialPosition,
-                  onMapCreated: (GoogleMapController controller) {
-                    if (!_controller.isCompleted) _controller.complete(controller);
-                    // Ensure we attempt to get the user's location once the map is ready
-                    // (this helps avoid timing issues where getCurrentPosition races with map creation).
-                    if (_currentPosition == null) {
-                      _getUserLocation();
-                    }
-                  },
-                  markers: _markers,
-                  myLocationButtonEnabled: _locationPermissionGranted,
-                  myLocationEnabled: _locationPermissionGranted,
-                ),
-                if (_isLoading)
-                  const Center(
-                    child: CircularProgressIndicator(),
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : _error != null
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.location_off, size: 48, color: Colors.grey),
+                      const SizedBox(height: 16),
+                      Text(_error!, textAlign: TextAlign.center),
+                      const SizedBox(height: 16),
+                      ElevatedButton(
+                        onPressed: _loadLocation,
+                        child: const Text('Retry'),
+                      ),
+                    ],
                   ),
-                if (!_isLoading && (_nearestCivilization != null || _nearestTransport != null))
-                  Align(
-                    alignment: Alignment.bottomCenter,
-                    child: Padding(
-                      padding: const EdgeInsets.all(12.0),
-                      child: Card(
-                        color: const Color(0xFF0E0E14).withAlpha((0.9 * 255).round()),
-                        child: Padding(
-                          padding: const EdgeInsets.all(12.0),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              if (_nearestCivilization != null) Text('Nearest place: $_nearestCivilization', style: const TextStyle(color: Colors.white)),
-                              if (_nearestTransport != null) Text('Nearest transport: $_nearestTransport', style: const TextStyle(color: Colors.white)),
-                            ],
+                )
+              : _currentPosition == null
+                  ? const Center(child: Text('No location data'))
+                  : Column(
+                      children: [
+                        // Google Map showing current location (requires API key in AndroidManifest)
+                        Expanded(
+                          child: GoogleMap(
+                            initialCameraPosition: CameraPosition(
+                              target: LatLng(_currentPosition!.latitude, _currentPosition!.longitude),
+                              zoom: 16,
+                            ),
+                            myLocationEnabled: true,
+                            myLocationButtonEnabled: true,
+                            markers: {
+                              Marker(
+                                markerId: const MarkerId('me'),
+                                position: LatLng(_currentPosition!.latitude, _currentPosition!.longitude),
+                              )
+                            },
+                            onMapCreated: (ctrl) {},
                           ),
                         ),
-                      ),
+                        // Location Info Card
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                            boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 8)],
+                          ),
+                          child: SingleChildScrollView(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    const Icon(Icons.location_on, color: Colors.teal),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          const Text('Your Location', style: TextStyle(fontWeight: FontWeight.bold)),
+                                          Text(
+                                            'Lat: ${_currentPosition!.latitude.toStringAsFixed(4)}, Lon: ${_currentPosition!.longitude.toStringAsFixed(4)}',
+                                            style: const TextStyle(color: Colors.black54, fontSize: 12),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.refresh),
+                                      onPressed: _loadLocation,
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 12),
+                                Text(
+                                  'Accuracy: ${_currentPosition!.accuracy.toStringAsFixed(1)}m',
+                                  style: const TextStyle(color: Colors.black54, fontSize: 12),
+                                ),
+                                const SizedBox(height: 16),
+                                const Text('Nearby Services', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                                const SizedBox(height: 12),
+                                // Nearby services buttons
+                                GridView.count(
+                                  crossAxisCount: 2,
+                                  shrinkWrap: true,
+                                  physics: const NeverScrollableScrollPhysics(),
+                                  mainAxisSpacing: 12,
+                                  crossAxisSpacing: 12,
+                                  childAspectRatio: 1.2,
+                                  children: [
+                                    _nearbyButton(context, 'Nearest Civilization', Icons.location_city),
+                                    _nearbyButton(context, 'Transportation', Icons.directions_car),
+                                    _nearbyButton(context, 'Hospital', Icons.local_hospital),
+                                    _nearbyButton(context, 'Police Station', Icons.local_police),
+                                  ],
+                                ),
+                                const SizedBox(height: 16),
+                                ElevatedButton.icon(
+                                  onPressed: () {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text('Location: ${_currentPosition!.latitude.toStringAsFixed(4)}, ${_currentPosition!.longitude.toStringAsFixed(4)}')),
+                                    );
+                                  },
+                                  icon: const Icon(Icons.share),
+                                  label: const Text('Share Location'),
+                                  style: ElevatedButton.styleFrom(backgroundColor: Colors.teal),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-              ],
-            )
-          : Center(
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.location_off, size: 64, color: Colors.white70),
-                    const SizedBox(height: 12),
-                    const Text('Location permission is required to show the map.', textAlign: TextAlign.center),
-                    const SizedBox(height: 12),
-                    ElevatedButton(
-                      onPressed: _checkPermissionAndInit,
-                      child: const Text('Request Permission'),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-      floatingActionButton: Column(
-        mainAxisSize: MainAxisSize.min,
+    );
+  }
+
+  Widget _nearbyButton(BuildContext context, String label, IconData icon) {
+    return ElevatedButton(
+      onPressed: () {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Searching for $label near you...')),
+        );
+      },
+      style: ElevatedButton.styleFrom(
+        backgroundColor: Colors.teal.shade100,
+        foregroundColor: Colors.teal,
+        elevation: 0,
+        padding: EdgeInsets.zero,
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          FloatingActionButton.extended(
-            heroTag: 'transport',
-            onPressed: _findTransport,
-            label: const Text('Find Transport'),
-            icon: const Icon(Icons.train),
-            backgroundColor: Colors.blueGrey[900],
-          ),
-          const SizedBox(height: 10),
-          FloatingActionButton.extended(
-            heroTag: 'civil',
-            onPressed: _findCivilization,
-            label: const Text('Find Nearest Civilization'),
-            icon: const Icon(Icons.explore),
-          ),
+          Icon(icon, size: 28),
+          const SizedBox(height: 6),
+          Text(label, textAlign: TextAlign.center, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
         ],
       ),
     );

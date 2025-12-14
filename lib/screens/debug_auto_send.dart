@@ -11,7 +11,7 @@ import '../services/server_upload.dart' as server_upload;
 import '../services/foreground_service.dart' as fg;
 import 'package:flutter/services.dart';
 import '../services/native_callbacks.dart' as native_callbacks;
-import '../services/doctor_ai.dart' as doctor_ai;
+import 'medical_chat.dart';
 
 class DebugAutoSendScreen extends StatefulWidget {
   const DebugAutoSendScreen({super.key});
@@ -268,15 +268,7 @@ class _DebugAutoSendScreenState extends State<DebugAutoSendScreen> {
     }
   }
 
-  void _runRedFlagCheck() {
-    final symptoms = _symptomsController.text.trim();
-    final vitals = <String, dynamic>{};
-    if (_spo2Controller.text.isNotEmpty) vitals['spo2'] = double.tryParse(_spo2Controller.text);
-    if (_pulseController.text.isNotEmpty) vitals['pulse'] = int.tryParse(_pulseController.text);
-    if (_respRateController.text.isNotEmpty) vitals['respRate'] = int.tryParse(_respRateController.text);
-    final res = doctor_ai.checkRedFlags({'symptoms': symptoms, 'vitals': vitals});
-    setState(() { _triageResult = res; _log += '\nTriage result: ${res['severity']}'; });
-  }
+  // On-device red-flag checks removed from UI; server triage remains available via the 'Call server triage' button.
   
   // Call server-side triage proxy (POST /ai/triage)
   Future<void> _callServerTriage() async {
@@ -401,25 +393,13 @@ class _DebugAutoSendScreenState extends State<DebugAutoSendScreen> {
               const SizedBox(height: 12),
             ],
 
-            // Doctor AI (on-device red-flag) UI
-            const Text('Doctor AI — On-device red-flag check', style: TextStyle(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-            TextField(controller: _symptomsController, decoration: const InputDecoration(labelText: 'Symptoms (short)')),
+            // Quick access: server triage and AI Assistant
             Row(children: [
-              Expanded(child: TextField(controller: _spo2Controller, decoration: const InputDecoration(labelText: 'SpO2 %'))),
-              const SizedBox(width: 8),
-              Expanded(child: TextField(controller: _pulseController, decoration: const InputDecoration(labelText: 'Pulse bpm'))),
-              const SizedBox(width: 8),
-              Expanded(child: TextField(controller: _respRateController, decoration: const InputDecoration(labelText: 'Resp rate'))),
-            ]),
-            const SizedBox(height: 8),
-            Row(children: [
-              ElevatedButton(onPressed: _runRedFlagCheck, child: const Text('Run red-flag check')),
-              const SizedBox(width: 8),
               ElevatedButton(onPressed: _callServerTriage, child: const Text('Call server triage')),
               const SizedBox(width: 8),
+              ElevatedButton(onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const MedicalChatScreen())), child: const Text('Open AI Assistant')),
+              const SizedBox(width: 8),
               if (_triageResult != null) ElevatedButton(onPressed: () async {
-                // send brief message to contacts
                 try {
                   final prefs = await SharedPreferences.getInstance();
                   final list = prefs.getStringList('selected_contacts') ?? <String>[];

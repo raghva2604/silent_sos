@@ -234,4 +234,14 @@ class EmergencyAIClient {
   }
 }
 
-module.exports = EmergencyAIClient;
+// Emergency AI client removed
+// Project now uses a local TensorFlow model for AI inference.
+// This file kept as a small stub to surface a clear error if any code still requires it.
+
+class RemovedEmergencyAIClient {
+  constructor() {
+    throw new Error('Emergency AI client removed. This project uses a local TensorFlow model now. Delete references to src/emergency-ai-client.js.');
+  }
+}
+
+module.exports = RemovedEmergencyAIClient;

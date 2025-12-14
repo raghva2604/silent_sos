@@ -1,0 +1,17 @@
+stages:
+  prepare:
+    cmd: python modules/data.py --stage prepare
+    outs:
+      - data/raw
+  extract_features:
+    cmd: python modules/data.py --stage extract
+    deps:
+      - data/raw
+    outs:
+      - data/features
+  train:
+    cmd: python train.py --config-name=config
+    deps:
+      - data/features
+    outs:
+      - output/checkpoints

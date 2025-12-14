@@ -1,0 +1,22 @@
+name: danger-train
+channels:
+  - conda-forge
+dependencies:
+  - python=3.10
+  - pip
+  - cudatoolkit=12.0  # optional, adjust per GPU
+  - pip:
+      - pytorch-lightning>=2.0
+      - torch>=2.0
+      - hydra-core>=1.2
+      - wandb
+      - neptune-client
+      - dvc
+      - omegaconf
+      - scikit-learn
+      - pandas
+      - numpy
+      - albumentations
+      - torchvision
+      - timm
+      - datasets

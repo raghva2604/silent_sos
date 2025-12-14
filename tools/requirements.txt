@@ -1,0 +1,12 @@
+# Voice Recognition (Vosk)
+vosk==0.3.46
+soundfile==0.12.1
+
+# Core dependencies
+numpy==1.26.4
+
+# Optional: For image generation (tools/generate_image_dataset.py)
+# Uncomment below to enable Stable Diffusion dataset generation
+# torch
+# diffusers
+# accelerate
