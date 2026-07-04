@@ -2,7 +2,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 Future<void> openSmsCompose(String phoneNumber, String message) async {
   final uri = Uri(
-    scheme: 'sms',
+    scheme: 'smsto',
     path: phoneNumber,
     queryParameters: {'body': message},
   );

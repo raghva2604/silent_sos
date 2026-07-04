@@ -1,2 +1,0 @@
-This is a small test recording file for send-sos attachment testing.
-Timestamp: 2025-12-03T00:00:00Z

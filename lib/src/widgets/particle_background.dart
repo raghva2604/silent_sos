@@ -83,7 +83,8 @@ class _ParticlePainter extends CustomPainter {
       // subtle movement controlled by progress
       final dx = (baseX + sin(progress * 2 * pi + i) * 28) % size.width;
       final dy = (baseY + cos(progress * 2 * pi + i) * 18) % size.height;
-      final r = 3 + (rng.nextDouble() * 10) * (0.6 + 0.4 * sin(progress * 2 * pi + i));
+      final r = 3 +
+          (rng.nextDouble() * 10) * (0.6 + 0.4 * sin(progress * 2 * pi + i));
       canvas.drawCircle(Offset(dx, dy), r, paint);
     }
   }

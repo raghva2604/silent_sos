@@ -11,45 +11,66 @@ dependencies:
     sdk: flutter
 
   # Firebase packages pinned for compatibility with other plugins
-  firebase_core: ^4.2.1
-  firebase_crashlytics: ^5.0.3
+  firebase_core: ^4.9.0
+  firebase_crashlytics: ^5.2.2
+
   provider: ^6.1.5
   permission_handler: ^12.0.1
   geolocator: ^14.0.2
-  flutter_contacts: ^1.1.7+1
+  flutter_contacts: ^2.1.0
   sensors_plus: ^7.0.0
+  volume_controller: ^3.5.0
   # Bump vibration plugin to a modern version that uses v2 embedding and AndroidX-compatible code
   vibration: ^3.1.4
   # bumped to a newer major version to be compatible with recent Android Gradle Plugin
   # (fixes missing namespace issues in older versions)
-  flutter_foreground_task: ^9.1.0
+  flutter_foreground_task: ^9.2.2
   url_launcher: ^6.1.7
   shared_preferences: ^2.0.15
-  flutter_local_notifications: ^19.5.0
+  flutter_local_notifications: ^21.0.0
   google_maps_flutter: ^2.6.1
-  camera: ^0.11.3
+  camera: ^0.12.0+1
   path_provider: ^2.0.15
   path: ^1.8.2
-  # bumped to a newer version compatible with firebase_core ^4.x series
-  firebase_storage: ^13.0.3
-  firebase_auth: ^6.1.2
+  video_player: ^2.6.0
+  # pinned to the versions resolved by `flutter pub upgrade --major-versions`
+  firebase_storage: ^13.4.1
+  firebase_auth: ^6.5.1
+  firebase_analytics: ^12.4.1
+  firebase_messaging: ^16.2.2
   share_plus: ^12.0.1
   http: ^1.1.0
+  flutter_map: ^8.3.0
+  latlong2: ^0.9.0
   record: ^6.1.2
+  video_compress: ^3.1.2
   image_picker: ^1.2.1
-  cloud_firestore: ^6.1.0
+  cloud_firestore: ^6.4.1
   fluttertoast: ^9.0.0
   # Upgrade file_picker to a modern v2-embedding compatible release to avoid v1 Registrar
   # compilation errors during Android builds.
-  file_picker: ^10.3.3
+  file_picker: ^11.0.2
   # TFLite model inference support (upgraded to latest stable version with v2 embedding support)
   tflite_flutter: ^0.12.0
   image: ^4.5.4
   # Lottie animations for onboarding and SOS animations
   lottie: ^3.3.2
+  # Open files and folders on device
+  open_file: ^3.1.2
   # Speech-to-text for push-to-talk MVP
   speech_to_text: ^7.3.0
+  flutter_tts: ^4.2.5
   flutter_sound: ^9.2.13
+  flutter_background_service: ^5.0.5
+  # Direct phone calling for emergency sequential dialing
+  flutter_phone_direct_caller: ^2.1.1
+  phone_state: ^3.0.1
+  smooth_page_indicator: ^2.0.1
+  device_info_plus: ^12.4.0
+  # Audio playback for SOS beep countdown
+  audioplayers: ^6.6.0
+  uuid: ^4.0.0
+  intl: ^0.20.2
   # Lightweight audio recording plugin removed to avoid Android Gradle Plugin
   # namespace errors in third-party plugin modules during release builds.
   # Recording is handled via the native foreground service (MethodChannel)
@@ -59,13 +80,12 @@ dependencies:
   # Schedule headless background Dart tasks (WorkManager)
   workmanager: ^0.9.0+3
   # Connectivity checking for offline-first AI
-  connectivity_plus: ^5.0.0
+  connectivity_plus: ^7.0.0
   # Coachmark / showcase for per-element tutorials
   # (coachmark package intentionally omitted to avoid version resolution issues during this pass)
   # FFmpeg disabled in this build due to native artifact availability; mergeVideos
   # will fall back to uploading both clips separately. To enable merging,
   # add an ffmpeg_kit variant that is available for your Android repo.
-  
 
 dev_dependencies:
   flutter_test:
@@ -82,11 +102,6 @@ flutter:
     - assets/models/model.tflite
     - assets/models/fall_detector.tflite
     - assets/models/labels.txt
-    - assets/images/splash.jpg
-    - assets/images/home.jpg
-    - assets/images/permissions.jpg
-    - assets/ui/ai_assistant.png
-    - assets/ui/upload_result.png
-    - assets/ui/contacts_map.png
-    - assets/ui/push_to_talk.png
+    
+    - assets/audio/
 

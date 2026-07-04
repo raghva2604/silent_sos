@@ -15,7 +15,8 @@ class SOSLocationService {
   DateTime? _lastSent;
 
   // Replace with real contacts from settings
-  final List<String> _emergencyContacts = const ['+1234567890'];
+  // Default emergency helpline number (India) - 108
+  final List<String> _emergencyContacts = const ['108'];
 
   Future<void> startSOSTracking(BuildContext context) async {
     if (_isTracking) return;
@@ -23,7 +24,9 @@ class SOSLocationService {
     var locationStatus = await Permission.location.request();
     var smsStatus = await Permission.sms.request();
     if (!locationStatus.isGranted || !smsStatus.isGranted) {
-      if (context.mounted) _showError(context, "Location and SMS permissions required for SOS.");
+      if (context.mounted) {
+        _showError(context, "Location and SMS permissions required for SOS.");
+      }
       return;
     }
 
@@ -44,7 +47,8 @@ class SOSLocationService {
         distanceFilter: 20,
       ),
     ).listen((Position pos) {
-      if (_lastSent == null || DateTime.now().difference(_lastSent!) > const Duration(seconds: 30)) {
+      if (_lastSent == null ||
+          DateTime.now().difference(_lastSent!) > const Duration(seconds: 30)) {
         _sendLocationUpdate(pos);
         _lastSent = DateTime.now();
       }
@@ -65,7 +69,8 @@ class SOSLocationService {
   }
 
   void _sendLocationUpdate(Position pos) {
-    final message = "📍 My location: https://maps.google.com/?q=${pos.latitude},${pos.longitude}";
+    final message =
+        "📍 My location: https://maps.google.com/?q=${pos.latitude},${pos.longitude}";
     _sendSmsToAll(message);
   }
 
@@ -75,8 +80,15 @@ class SOSLocationService {
     }
   }
 
+  /// Public helper: send SMS to a provided list of phone numbers.
+  Future<void> sendSmsToNumbers(List<String> numbers, String message) async {
+    for (var number in numbers) {
+      await _sendSms(number, message);
+    }
+  }
+
   Future<void> _sendSms(String to, String message) async {
-    final Uri uri = Uri.parse('sms:$to?body=${Uri.encodeFull(message)}');
+    final Uri uri = Uri.parse('smsto:$to?body=${Uri.encodeFull(message)}');
     try {
       if (await canLaunchUrl(uri)) {
         await launchUrl(uri, mode: LaunchMode.externalApplication);
@@ -104,9 +116,12 @@ class SOSLocationService {
           title: const Text('Enable Background Location'),
           content: const Text(
               'Go to Settings > Apps > SilentSOS > Permissions > Location\n'
-                  'and select “Allow all the time”.'
-          ),
-          actions: [TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('OK'))],
+              'and select “Allow all the time”.'),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                child: const Text('OK'))
+          ],
         ),
       );
     }

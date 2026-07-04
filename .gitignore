@@ -114,3 +114,4 @@ screenshot*.png
 /backend/models/injury_detector.tflite
 /backend/models/labels.txt
 
+node_modules

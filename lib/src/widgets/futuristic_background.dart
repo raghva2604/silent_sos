@@ -4,19 +4,25 @@ import 'package:flutter/material.dart';
 class FuturisticBackground extends StatefulWidget {
   final Color base1;
   final Color base2;
-  const FuturisticBackground({super.key, this.base1 = const Color(0xFF0B1220), this.base2 = const Color(0xFF0F1724)});
+  const FuturisticBackground(
+      {super.key,
+      this.base1 = const Color(0xFF0B1220),
+      this.base2 = const Color(0xFF0F1724)});
 
   @override
   State<FuturisticBackground> createState() => _FuturisticBackgroundState();
 }
 
-class _FuturisticBackgroundState extends State<FuturisticBackground> with SingleTickerProviderStateMixin {
+class _FuturisticBackgroundState extends State<FuturisticBackground>
+    with SingleTickerProviderStateMixin {
   late final AnimationController _ctl;
 
   @override
   void initState() {
     super.initState();
-    _ctl = AnimationController(vsync: this, duration: const Duration(seconds: 8))..repeat();
+    _ctl =
+        AnimationController(vsync: this, duration: const Duration(seconds: 8))
+          ..repeat();
   }
 
   @override
@@ -43,7 +49,10 @@ class _FuturisticBackgroundState extends State<FuturisticBackground> with Single
                   gradient: RadialGradient(
                     center: Alignment(cx * 2 - 1, cy * 2 - 1),
                     radius: 1.1,
-                    colors: [widget.base1.withValues(alpha: 0.9), widget.base2.withValues(alpha: 0.95)],
+                    colors: [
+                      widget.base1.withValues(alpha: 0.9),
+                      widget.base2.withValues(alpha: 0.95)
+                    ],
                     stops: const [0.0, 1.0],
                   ),
                 ),
@@ -72,10 +81,14 @@ class _OrbPainter extends CustomPainter {
     // RNG removed - deterministic visuals are derived from phase/time.
     for (int i = 0; i < 6; i++) {
       final phase = (i / 6) + t * (0.2 + i * 0.05);
-      final x = size.width * (0.2 + 0.6 * ((math.cos(phase * 2 * math.pi) + 1) / 2));
-      final y = size.height * (0.2 + 0.6 * ((math.sin(phase * 2 * math.pi) + 1) / 2));
+      final x =
+          size.width * (0.2 + 0.6 * ((math.cos(phase * 2 * math.pi) + 1) / 2));
+      final y =
+          size.height * (0.2 + 0.6 * ((math.sin(phase * 2 * math.pi) + 1) / 2));
       final radius = 80.0 + 60.0 * math.sin(phase * 2 * math.pi + i);
-      final c = Color.lerp(const Color(0xFF00FFC2), const Color(0xFF3B82F6), (i / 6))!.withValues(alpha: 0.06 + 0.02 * i);
+      final c =
+          Color.lerp(const Color(0xFF00FFC2), const Color(0xFF3B82F6), (i / 6))!
+              .withValues(alpha: 0.06 + 0.02 * i);
       paint.color = c;
       canvas.drawCircle(Offset(x, y), radius, paint);
     }

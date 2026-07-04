@@ -3,25 +3,24 @@ import 'package:flutter/foundation.dart';
 /// Email validation service: regex check + format validation
 class EmailValidator {
   /// Simple email regex pattern
-  static final _emailRegex = RegExp(
-    r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
-  );
+  static final _emailRegex =
+      RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
 
   /// Validate email format using regex
   static bool isValidEmail(String email) {
     if (email.isEmpty) return false;
     email = email.trim().toLowerCase();
-    
+
     // Check basic format
     if (!email.contains('@')) return false;
     if (email.startsWith('@') || email.endsWith('@')) return false;
     if (email.contains(' ')) return false;
-    
+
     // Check length constraints
     if (email.length > 254) return false; // RFC 5321
     final parts = email.split('@');
     if (parts[0].length > 64) return false; // Local part max 64 chars
-    
+
     // Regex validation
     try {
       return _emailRegex.hasMatch(email);
@@ -40,7 +39,7 @@ class EmailValidator {
       'guerrillamail.com',
       'mailinator.com',
     ];
-    
+
     final domain = email.split('@').last.toLowerCase();
     return disposableDomains.contains(domain);
   }
@@ -49,7 +48,7 @@ class EmailValidator {
   static bool isValidPhone(String phone) {
     if (phone.isEmpty) return false;
     phone = phone.replaceAll(RegExp(r'\D'), ''); // Remove non-digits
-    
+
     // Check if it's 10-15 digits (E.164 standard)
     return phone.length >= 10 && phone.length <= 15;
   }

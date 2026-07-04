@@ -1,0 +1,122 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html, body, #root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: radial-gradient(circle at top left, rgba(34, 197, 94, 0.18), transparent 22%),
+    radial-gradient(circle at top right, rgba(59, 130, 246, 0.14), transparent 20%),
+    radial-gradient(circle at bottom left, rgba(168, 85, 247, 0.10), transparent 24%),
+    #05050b;
+}
+
+@keyframes floatGlow {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-6px); }
+}
+
+.glow-float {
+  animation: floatGlow 5s ease-in-out infinite;
+}
+
+/* Avatar Marker Styles */
+.avatar-marker {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: white;
+  font-weight: bold;
+  font-size: 16px;
+  border: 3px solid white;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  transition: all 0.2s ease;
+}
+
+.avatar-marker.selected {
+  background: linear-gradient(135deg, #fbbf24, #f59e0b);
+  border: 3px solid #fef3c7;
+  box-shadow: 0 0 12px rgba(251, 191, 36, 0.8);
+  transform: scale(1.15);
+}
+
+/* Cluster Marker Styles */
+.cluster-marker {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: white;
+  font-weight: bold;
+  font-size: 18px;
+  border: 3px solid white;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.cluster-marker:hover {
+  background: linear-gradient(135deg, #fbbf24, #f59e0b);
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+/* Spider Marker Styles */
+.spider-marker {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  color: white;
+  font-weight: bold;
+  font-size: 12px;
+  border: 2px solid white;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.spider-marker:hover {
+  background: linear-gradient(135deg, #60a5fa, #3b82f6);
+  transform: scale(1.2);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+/* Leaflet Map Customizations */
+.leaflet-container {
+  font-family: inherit;
+  background-color: #1a1a1a;
+}
+
+.leaflet-popup-content {
+  background-color: #2a2a2a;
+  color: #e5e7eb;
+  border-radius: 8px;
+}
+
+.leaflet-popup-content strong {
+  color: #fbbf24;
+}
+
+.leaflet-popup-tip {
+  background-color: #2a2a2a;
+}
+
+/* Dark mode for tile layer when available */
+.leaflet-tile {
+  filter: brightness(0.85) contrast(1.1);
+}
+

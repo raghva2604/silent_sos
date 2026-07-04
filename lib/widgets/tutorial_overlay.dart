@@ -5,7 +5,10 @@ class TutorialStep {
   final GlobalKey targetKey;
   final String title;
   final String description;
-  TutorialStep({required this.targetKey, required this.title, required this.description});
+  TutorialStep(
+      {required this.targetKey,
+      required this.title,
+      required this.description});
 }
 
 class TutorialOverlay extends StatefulWidget {
@@ -65,9 +68,18 @@ class _TutorialOverlayState extends State<TutorialOverlay> {
                 child: Container(
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Theme.of(context).colorScheme.primary, width: 2),
+                    border: Border.all(
+                        color: Theme.of(context).colorScheme.primary, width: 2),
                     color: Colors.transparent,
-                    boxShadow: [BoxShadow(color: Theme.of(context).colorScheme.primary.withAlpha(40), blurRadius: 24, spreadRadius: 8)],
+                    boxShadow: [
+                      BoxShadow(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .primary
+                              .withAlpha(40),
+                          blurRadius: 24,
+                          spreadRadius: 8)
+                    ],
                   ),
                 ),
               ),
@@ -78,10 +90,21 @@ class _TutorialOverlayState extends State<TutorialOverlay> {
               left: 20,
               top: rect.bottom + 12,
               right: 20,
-              child: _Bubble(title: step.title, description: step.description, onNext: _next, onSkip: _skip, isLast: _index == widget.steps.length - 1),
+              child: _Bubble(
+                  title: step.title,
+                  description: step.description,
+                  onNext: _next,
+                  onSkip: _skip,
+                  isLast: _index == widget.steps.length - 1),
             )
           else
-            Center(child: _Bubble(title: step.title, description: step.description, onNext: _next, onSkip: _skip, isLast: _index == widget.steps.length - 1)),
+            Center(
+                child: _Bubble(
+                    title: step.title,
+                    description: step.description,
+                    onNext: _next,
+                    onSkip: _skip,
+                    isLast: _index == widget.steps.length - 1)),
         ],
       ),
     );
@@ -94,7 +117,12 @@ class _Bubble extends StatelessWidget {
   final VoidCallback onNext;
   final VoidCallback onSkip;
   final bool isLast;
-  const _Bubble({required this.title, required this.description, required this.onNext, required this.onSkip, required this.isLast});
+  const _Bubble(
+      {required this.title,
+      required this.description,
+      required this.onNext,
+      required this.onSkip,
+      required this.isLast});
 
   @override
   Widget build(BuildContext context) {
@@ -107,16 +135,21 @@ class _Bubble extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Colors.white)),
+            Text(title,
+                style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.white)),
             const SizedBox(height: 8),
             Text(description, style: const TextStyle(color: Colors.white70)),
             const SizedBox(height: 12),
-                Row(
+            Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
                 NeonButton(onTap: onSkip, child: const Text('Skip')),
                 const SizedBox(width: 8),
-                NeonButton(onTap: onNext, child: Text(isLast ? 'Finish' : 'Next')),
+                NeonButton(
+                    onTap: onNext, child: Text(isLast ? 'Finish' : 'Next')),
               ],
             )
           ],

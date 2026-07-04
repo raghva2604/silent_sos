@@ -22,7 +22,8 @@ class _HotwordSettingsState extends State<HotwordSettings> {
   Future<void> _load() async {
     final p = await SharedPreferences.getInstance();
     setState(() {
-      _modelController.text = p.getString('vosk_model_path') ?? '/sdcard/vosk-model-small-en-us-0.15';
+      _modelController.text = p.getString('vosk_model_path') ??
+          '/sdcard/vosk-model-small-en-us-0.15';
       _phraseController.text = p.getString('custom_hotword') ?? '';
       _enabled = p.getBool('hotword_enabled') ?? false;
     });
@@ -34,7 +35,8 @@ class _HotwordSettingsState extends State<HotwordSettings> {
     await p.setString('vosk_model_path', _modelController.text);
     await p.setString('custom_hotword', _phraseController.text);
     await p.setBool('hotword_enabled', _enabled);
-    messenger.showSnackBar(const SnackBar(content: Text('Hotword settings saved')));
+    messenger
+        .showSnackBar(const SnackBar(content: Text('Hotword settings saved')));
   }
 
   @override
@@ -59,11 +61,13 @@ class _HotwordSettingsState extends State<HotwordSettings> {
             ),
             TextField(
               controller: _modelController,
-              decoration: const InputDecoration(labelText: 'Vosk model path on device'),
+              decoration:
+                  const InputDecoration(labelText: 'Vosk model path on device'),
             ),
             TextField(
               controller: _phraseController,
-              decoration: const InputDecoration(labelText: 'Custom hotword phrase'),
+              decoration:
+                  const InputDecoration(labelText: 'Custom hotword phrase'),
             ),
             const SizedBox(height: 16),
             ElevatedButton(onPressed: _save, child: const Text('Save')),

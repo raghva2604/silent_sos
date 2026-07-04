@@ -265,14 +265,17 @@ class LanguageService extends ChangeNotifier {
 
   /// Get translated string by key
   String t(String key) {
-    return _strings[_currentLanguage]?[key] ?? _strings[_defaultLanguage]?[key] ?? key;
+    return _strings[_currentLanguage]?[key] ??
+        _strings[_defaultLanguage]?[key] ??
+        key;
   }
 
   /// Get current language code
   String get currentLanguage => _currentLanguage;
 
   /// Get current language name
-  String get currentLanguageName => _languages[_currentLanguage] ?? _defaultLanguage;
+  String get currentLanguageName =>
+      _languages[_currentLanguage] ?? _defaultLanguage;
 
   /// Get all available languages
   Map<String, String> get availableLanguages => _languages;
@@ -280,7 +283,7 @@ class LanguageService extends ChangeNotifier {
   /// Set language
   Future<void> setLanguage(String languageCode) async {
     if (!_languages.containsKey(languageCode)) return;
-    
+
     _currentLanguage = languageCode;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('app_language', languageCode);
@@ -288,7 +291,8 @@ class LanguageService extends ChangeNotifier {
   }
 
   /// Get all translations for current language
-  Map<String, String> get allStrings => _strings[_currentLanguage] ?? _strings[_defaultLanguage]!;
+  Map<String, String> get allStrings =>
+      _strings[_currentLanguage] ?? _strings[_defaultLanguage]!;
 }
 
 /// Helper function for quick access

@@ -10,13 +10,16 @@ class RGBBackground extends StatefulWidget {
   State<RGBBackground> createState() => _RGBBackgroundState();
 }
 
-class _RGBBackgroundState extends State<RGBBackground> with SingleTickerProviderStateMixin {
+class _RGBBackgroundState extends State<RGBBackground>
+    with SingleTickerProviderStateMixin {
   late final AnimationController _ctrl;
 
   @override
   void initState() {
     super.initState();
-    _ctrl = AnimationController(vsync: this, duration: const Duration(seconds: 8))..repeat();
+    _ctrl =
+        AnimationController(vsync: this, duration: const Duration(seconds: 8))
+          ..repeat();
   }
 
   @override
@@ -38,7 +41,11 @@ class _RGBBackgroundState extends State<RGBBackground> with SingleTickerProvider
     return LinearGradient(
       begin: Alignment(-1 + 2 * r, -1 + 2 * g),
       end: Alignment(1 - 2 * b, 1 - 2 * r),
-      colors: [c1.withAlpha((0.16 * 255).round()), c2.withAlpha((0.12 * 255).round()), c3.withAlpha((0.08 * 255).round())],
+      colors: [
+        c1.withAlpha((0.16 * 255).round()),
+        c2.withAlpha((0.12 * 255).round()),
+        c3.withAlpha((0.08 * 255).round())
+      ],
       stops: const [0.0, 0.5, 1.0],
     );
   }
@@ -53,7 +60,13 @@ class _RGBBackgroundState extends State<RGBBackground> with SingleTickerProvider
           decoration: BoxDecoration(
             gradient: _makeGradient(t),
             // subtle vignette
-            boxShadow: [BoxShadow(color: Colors.black.withAlpha((0.45 * 255).round()), blurRadius: 40, spreadRadius: 10, offset: const Offset(0, 8))],
+            boxShadow: [
+              BoxShadow(
+                  color: Colors.black.withAlpha((0.45 * 255).round()),
+                  blurRadius: 40,
+                  spreadRadius: 10,
+                  offset: const Offset(0, 8))
+            ],
           ),
           child: widget.child,
         );

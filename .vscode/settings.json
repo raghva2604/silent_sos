@@ -8,5 +8,7 @@
     "node_modules": true,
     ".env": false
   },
-  "cmake.sourceDirectory": "C:/projects/silent_sos/linux"
+  "cmake.sourceDirectory": "C:/projects/silent_sos/linux",
+  "C_Cpp.default.compilerPath": "c:\\projects\\silent_sos\\.dart_tool\\version",
+  "java.configuration.updateBuildConfiguration": "interactive"
 }

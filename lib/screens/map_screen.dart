@@ -24,10 +24,11 @@ class _MapScreenState extends State<MapScreen> {
     try {
       setState(() => _loading = true);
       final permission = await Geolocator.checkPermission();
-      
+
       if (permission == LocationPermission.denied) {
         final requested = await Geolocator.requestPermission();
-        if (requested != LocationPermission.whileInUse && requested != LocationPermission.always) {
+        if (requested != LocationPermission.whileInUse &&
+            requested != LocationPermission.always) {
           setState(() {
             _error = 'Location permission denied';
             _loading = false;
@@ -69,7 +70,8 @@ class _MapScreenState extends State<MapScreen> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.location_off, size: 48, color: Colors.grey),
+                      const Icon(Icons.location_off,
+                          size: 48, color: Colors.grey),
                       const SizedBox(height: 16),
                       Text(_error!, textAlign: TextAlign.center),
                       const SizedBox(height: 16),
@@ -88,7 +90,8 @@ class _MapScreenState extends State<MapScreen> {
                         Expanded(
                           child: GoogleMap(
                             initialCameraPosition: CameraPosition(
-                              target: LatLng(_currentPosition!.latitude, _currentPosition!.longitude),
+                              target: LatLng(_currentPosition!.latitude,
+                                  _currentPosition!.longitude),
                               zoom: 16,
                             ),
                             myLocationEnabled: true,
@@ -96,7 +99,8 @@ class _MapScreenState extends State<MapScreen> {
                             markers: {
                               Marker(
                                 markerId: const MarkerId('me'),
-                                position: LatLng(_currentPosition!.latitude, _currentPosition!.longitude),
+                                position: LatLng(_currentPosition!.latitude,
+                                    _currentPosition!.longitude),
                               )
                             },
                             onMapCreated: (ctrl) {},
@@ -107,8 +111,11 @@ class _MapScreenState extends State<MapScreen> {
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
                             color: Colors.white,
-                            borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-                            boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 8)],
+                            borderRadius: const BorderRadius.vertical(
+                                top: Radius.circular(16)),
+                            boxShadow: [
+                              BoxShadow(color: Colors.black12, blurRadius: 8)
+                            ],
                           ),
                           child: SingleChildScrollView(
                             child: Column(
@@ -116,16 +123,22 @@ class _MapScreenState extends State<MapScreen> {
                               children: [
                                 Row(
                                   children: [
-                                    const Icon(Icons.location_on, color: Colors.teal),
+                                    const Icon(Icons.location_on,
+                                        color: Colors.teal),
                                     const SizedBox(width: 12),
                                     Expanded(
                                       child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
                                         children: [
-                                          const Text('Your Location', style: TextStyle(fontWeight: FontWeight.bold)),
+                                          const Text('Your Location',
+                                              style: TextStyle(
+                                                  fontWeight: FontWeight.bold)),
                                           Text(
                                             'Lat: ${_currentPosition!.latitude.toStringAsFixed(4)}, Lon: ${_currentPosition!.longitude.toStringAsFixed(4)}',
-                                            style: const TextStyle(color: Colors.black54, fontSize: 12),
+                                            style: const TextStyle(
+                                                color: Colors.black54,
+                                                fontSize: 12),
                                           ),
                                         ],
                                       ),
@@ -139,10 +152,14 @@ class _MapScreenState extends State<MapScreen> {
                                 const SizedBox(height: 12),
                                 Text(
                                   'Accuracy: ${_currentPosition!.accuracy.toStringAsFixed(1)}m',
-                                  style: const TextStyle(color: Colors.black54, fontSize: 12),
+                                  style: const TextStyle(
+                                      color: Colors.black54, fontSize: 12),
                                 ),
                                 const SizedBox(height: 16),
-                                const Text('Nearby Services', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                                const Text('Nearby Services',
+                                    style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 14)),
                                 const SizedBox(height: 12),
                                 // Nearby services buttons
                                 GridView.count(
@@ -153,22 +170,31 @@ class _MapScreenState extends State<MapScreen> {
                                   crossAxisSpacing: 12,
                                   childAspectRatio: 1.2,
                                   children: [
-                                    _nearbyButton(context, 'Nearest Civilization', Icons.location_city),
-                                    _nearbyButton(context, 'Transportation', Icons.directions_car),
-                                    _nearbyButton(context, 'Hospital', Icons.local_hospital),
-                                    _nearbyButton(context, 'Police Station', Icons.local_police),
+                                    _nearbyButton(
+                                        context,
+                                        'Nearest Civilization',
+                                        Icons.location_city),
+                                    _nearbyButton(context, 'Transportation',
+                                        Icons.directions_car),
+                                    _nearbyButton(context, 'Hospital',
+                                        Icons.local_hospital),
+                                    _nearbyButton(context, 'Police Station',
+                                        Icons.local_police),
                                   ],
                                 ),
                                 const SizedBox(height: 16),
                                 ElevatedButton.icon(
                                   onPressed: () {
                                     ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(content: Text('Location: ${_currentPosition!.latitude.toStringAsFixed(4)}, ${_currentPosition!.longitude.toStringAsFixed(4)}')),
+                                      SnackBar(
+                                          content: Text(
+                                              'Location: ${_currentPosition!.latitude.toStringAsFixed(4)}, ${_currentPosition!.longitude.toStringAsFixed(4)}')),
                                     );
                                   },
                                   icon: const Icon(Icons.share),
                                   label: const Text('Share Location'),
-                                  style: ElevatedButton.styleFrom(backgroundColor: Colors.teal),
+                                  style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.teal),
                                 ),
                               ],
                             ),
@@ -197,7 +223,10 @@ class _MapScreenState extends State<MapScreen> {
         children: [
           Icon(icon, size: 28),
           const SizedBox(height: 6),
-          Text(label, textAlign: TextAlign.center, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+          Text(label,
+              textAlign: TextAlign.center,
+              style:
+                  const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
         ],
       ),
     );

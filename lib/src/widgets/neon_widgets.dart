@@ -57,7 +57,8 @@ class _NeonButtonState extends State<NeonButton>
               borderRadius: BorderRadius.circular(widget.radius),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.cyanAccent.withAlpha(((0.12 + _ctl.value * 0.12) * 255).round()),
+                  color: Colors.cyanAccent
+                      .withAlpha(((0.12 + _ctl.value * 0.12) * 255).round()),
                   blurRadius: glow,
                   spreadRadius: 2,
                 )
@@ -141,7 +142,10 @@ class _AnimatedGlowingSOSState extends State<AnimatedGlowingSOS>
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     gradient: RadialGradient(
-                      colors: [Colors.red.withAlpha((glowAlpha * 255).round()), Colors.transparent],
+                      colors: [
+                        Colors.red.withAlpha((glowAlpha * 255).round()),
+                        Colors.transparent
+                      ],
                     ),
                   ),
                 ),
@@ -207,7 +211,8 @@ class NeonIcon extends StatelessWidget {
         height: 44,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          gradient: RadialGradient(colors: [Colors.cyanAccent, Colors.tealAccent]),
+          gradient:
+              RadialGradient(colors: [Colors.cyanAccent, Colors.tealAccent]),
           boxShadow: [
             BoxShadow(
               color: Colors.cyanAccent.withAlpha((0.24 * 255).round()),

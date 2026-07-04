@@ -1,53 +1,115 @@
 import 'dart:async';
-import 'dart:convert';
 import 'package:flutter/services.dart';
-import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
+
+typedef UploadProgressCb = void Function(int);
+typedef UploadCompleteCb = void Function(Map<String, dynamic>);
+typedef HotwordCb = void Function(String phrase);
+typedef RequirePinCb = void Function(bool fromNotification);
+typedef FallCb = void Function(String trigger);
+typedef VideoSavedCb = void Function(String videoPath);
+typedef VoiceCommandCb = void Function(String command);
 
 class SosIntegration {
-  // Channel name used by existing MainActivity.kt
   static const MethodChannel _channel = MethodChannel('silent_sos/foreground');
 
-  // Callbacks for upload progress and completion
-  static VoidCallback? _onUploadProgress;
-  static Function(Map<String, dynamic>)? _onUploadComplete;
+  static UploadProgressCb? _onUploadProgress;
+  static UploadCompleteCb? _onUploadComplete;
+  static HotwordCb? _onHotwordDetected;
+  static RequirePinCb? _onRequirePin;
+  static FallCb? _onFallDetected;
+  static VideoSavedCb? _onVideoSaved;
+  static VoiceCommandCb? _onVoiceCommand;
 
-  /// Initialize upload progress listeners.
-  /// Call this once during app startup to set up listening for native upload events.
+  /// Initialize the method channel handlers for native -> Dart events.
   static void initializeUploadListeners() {
     _channel.setMethodCallHandler((call) async {
-      if (call.method == 'upload_progress') {
-        final progress = call.arguments['progress'] as int?;
-        if (progress != null && _onUploadProgress != null) {
-          _onUploadProgress!();
+      try {
+        switch (call.method) {
+          case 'videoUploadProgress':
+            final v = call.arguments as int? ?? 0;
+            _onUploadProgress?.call(v);
+            break;
+          case 'videoUploadSuccess':
+            final args = Map<String, dynamic>.from(call.arguments ?? {});
+            _onUploadComplete?.call(args);
+            break;
+          case 'videoUploadFailed':
+            final args = Map<String, dynamic>.from(call.arguments ?? {});
+            _onUploadComplete?.call({'success': false, 'error': args['error']});
+            break;
+          case 'hotword_detected':
+            final args = Map<String, dynamic>.from(call.arguments ?? {});
+            final phrase = args['phrase']?.toString() ?? '';
+            _onHotwordDetected?.call(phrase);
+            break;
+          case 'fall_detected':
+            final args = Map<String, dynamic>.from(call.arguments ?? {});
+            final trigger = args['trigger']?.toString() ?? 'fall';
+            _onFallDetected?.call(trigger);
+            break;
+          case 'requirePin':
+            final args = Map<String, dynamic>.from(call.arguments ?? {});
+            final fromNotification = args['fromNotification'] as bool? ?? false;
+            _onRequirePin?.call(fromNotification);
+            break;
+          case 'nativeDiagnostic':
+            // Handle native fall detection forwarded from MainActivity
+            final args = Map<String, dynamic>.from(call.arguments ?? {});
+            final payload = args['payload']?.toString() ?? '';
+            if (payload.contains('Fall detected')) {
+              print('🔴 Native Fall Detected via nativeDiagnostic!');
+              _onFallDetected?.call('fall');
+            } else {
+              _onUploadComplete?.call({'diagnostic': payload});
+            }
+            break;
+          case 'video_saved':
+            final args = Map<String, dynamic>.from(call.arguments ?? {});
+            final path = args['path']?.toString() ?? '';
+            if (path.isNotEmpty) {
+              _onVideoSaved?.call(path);
+            }
+            break;
+          case 'countdown_started':
+            // Log countdown start from native; Dart can optionally show UI
+            final args = Map<String, dynamic>.from(call.arguments ?? {});
+            final seconds = args['seconds'] as int? ?? 10;
+            final source = args['source']?.toString() ?? 'unknown';
+            print('🔔 Native countdown_started: $seconds sec from $source');
+            break;
+          case 'recording_started':
+            // Log recording start from native
+            final args = Map<String, dynamic>.from(call.arguments ?? {});
+            final duration = args['duration'] as int? ?? 15;
+            print('🎥 Native recording_started: $duration sec');
+            break;
+          case 'voice_command_triggered':
+            // Google Assistant voice command detected
+            final args = Map<String, dynamic>.from(call.arguments ?? {});
+            final command = args['command']?.toString() ?? '';
+            print('🎤 Google Assistant voice command: $command');
+            _onVoiceCommand?.call(command);
+            break;
+          default:
+            break;
         }
-      } else if (call.method == 'upload_complete') {
-        final result = Map<String, dynamic>.from(call.arguments ?? {});
-        if (_onUploadComplete != null) {
-          _onUploadComplete!(result);
-        }
+      } catch (e) {
+        // swallow errors to avoid crashing native handler
       }
     });
   }
 
-  /// Set a callback to be invoked when upload progress is reported.
-  /// The progress value is available via the MethodChannel argument.
-  /// Example: (progress) => print('Upload progress: $progress%')
-  static void setOnUploadProgress(Function(int) callback) {
-    _onUploadProgress = () {
-      // Note: progress value is embedded in the MethodChannel call
-      // Retrieve via _channel.invokeMethod if needed or track via _onUploadComplete
-    };
-  }
+  static void setOnUploadProgress(UploadProgressCb cb) =>
+      _onUploadProgress = cb;
+  static void setOnUploadComplete(UploadCompleteCb cb) =>
+      _onUploadComplete = cb;
+  static void setOnHotwordDetected(HotwordCb cb) => _onHotwordDetected = cb;
+  static void setOnRequirePin(RequirePinCb cb) => _onRequirePin = cb;
+  static void setOnFallDetected(FallCb cb) => _onFallDetected = cb;
+  static void setOnVideoSaved(VideoSavedCb cb) => _onVideoSaved = cb;
+  static void setOnVoiceCommand(VoiceCommandCb cb) => _onVoiceCommand = cb;
 
-  /// Set a callback to be invoked when upload completes.
-  /// The result map contains: {success: bool, error: String, payload: String}
-  /// Example: (result) => print('Upload complete: ${result["success"]}')
-  static void setOnUploadComplete(Function(Map<String, dynamic>) callback) {
-    _onUploadComplete = callback;
-  }
-
-  /// Start the native foreground sensor service (non-recording)
+  // ------------ Native control wrappers ------------
   static Future<bool> startNativeService() async {
     try {
       final res = await _channel.invokeMethod('start');
@@ -57,7 +119,6 @@ class SosIntegration {
     }
   }
 
-  /// Stop native foreground service
   static Future<bool> stopNativeService() async {
     try {
       final res = await _channel.invokeMethod('stop');
@@ -67,20 +128,17 @@ class SosIntegration {
     }
   }
 
-  /// Start recording using the native ForegroundRecordingService
-  static Future<bool> startNativeRecording({int maxSeconds = 60, String? label}) async {
+  static Future<bool> startNativeRecording(
+      {int maxSeconds = 60, String? label}) async {
     try {
-      final res = await _channel.invokeMethod('startNativeRecording', {
-        'maxSeconds': maxSeconds,
-        'label': label ?? 'sos_${DateTime.now().millisecondsSinceEpoch}.m4a'
-      });
+      final args = {'maxSeconds': maxSeconds, 'label': label};
+      final res = await _channel.invokeMethod('startNativeRecording', args);
       return res == true;
     } catch (e) {
       return false;
     }
   }
 
-  /// Stop native recording
   static Future<bool> stopNativeRecording() async {
     try {
       final res = await _channel.invokeMethod('stopNativeRecording');
@@ -90,41 +148,48 @@ class SosIntegration {
     }
   }
 
-  /// Send an SOS request to the configured backend.
-  /// The backend URL is read from SharedPreferences 'server_url'
-  static Future<Map<String, dynamic>> sendSosToBackend({
-    required Map<String, dynamic> meta,
-    required List<Map<String, dynamic>> recipients,
-  }) async {
+  static Future<bool> startHotwordService() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final server = prefs.getString('server_url') ?? 'http://localhost:3000';
-      final uri = Uri.parse('$server/send-sos');
-      final body = jsonEncode({'meta': meta, 'recipients': recipients});
-      final resp = await http.post(uri, headers: {'Content-Type': 'application/json'}, body: body).timeout(const Duration(seconds: 12));
-      if (resp.statusCode == 200) return jsonDecode(resp.body) as Map<String, dynamic>;
-      return {'ok': false, 'status': resp.statusCode, 'body': resp.body};
+      final res = await _channel.invokeMethod('startHotwordService');
+      return res == true;
     } catch (e) {
-      return {'ok': false, 'error': e.toString()};
+      return false;
     }
   }
 
-  /// Upload a recorded file path to backend using /upload-recording
-  /// Note: For files recorded by native service, app can read shared pref key
-  /// "last_native_recording_path" which ForegroundRecordingService writes.
-  static Future<Map<String, dynamic>> uploadRecording(String filePath) async {
+  static Future<bool> stopHotwordService() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final server = prefs.getString('server_url') ?? 'http://localhost:3000';
-      final uri = Uri.parse('$server/upload-recording');
-      final request = http.MultipartRequest('POST', uri);
-      request.files.add(await http.MultipartFile.fromPath('recording', filePath));
-      final streamed = await request.send().timeout(const Duration(seconds: 30));
-      final resp = await http.Response.fromStream(streamed);
-      if (resp.statusCode == 200) return jsonDecode(resp.body) as Map<String, dynamic>;
-      return {'ok': false, 'status': resp.statusCode, 'body': resp.body};
+      final res = await _channel.invokeMethod('stopHotwordService');
+      return res == true;
     } catch (e) {
-      return {'ok': false, 'error': e.toString()};
+      return false;
+    }
+  }
+
+  static Future<bool> bringToForeground(Map<String, dynamic> extras) async {
+    try {
+      final res = await _channel.invokeMethod('bringToForeground', extras);
+      return res == true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  static Future<bool> requestOverlayPermission() async {
+    try {
+      final res = await _channel.invokeMethod('requestOverlayPermission');
+      return res == true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  static Future<bool> cancelNativePending() async {
+    try {
+      final res = await _channel.invokeMethod('cancelNativePending');
+      return res == true;
+    } catch (e) {
+      return false;
     }
   }
 }

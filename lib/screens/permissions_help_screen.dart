@@ -38,7 +38,9 @@ class _PermissionsHelpScreenState extends State<PermissionsHelpScreen> {
       trailing: Row(mainAxisSize: MainAxisSize.min, children: [
         TextButton(onPressed: onRequest, child: const Text('Request')),
         const SizedBox(width: 8),
-        TextButton(onPressed: () async => await openAppSettings(), child: const Text('Open Settings')),
+        TextButton(
+            onPressed: () async => await openAppSettings(),
+            child: const Text('Open Settings')),
       ]),
     );
   }
@@ -70,7 +72,8 @@ class _PermissionsHelpScreenState extends State<PermissionsHelpScreen> {
               await _refresh();
             }),
             const SizedBox(height: 20),
-            const Text('Tip: If a permission is permanently denied, use Open Settings to enable it manually.'),
+            const Text(
+                'Tip: If a permission is permanently denied, use Open Settings to enable it manually.'),
           ],
         ),
       ),

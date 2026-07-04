@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:shared_preferences/shared_preferences.dart';
 import '../src/widgets/futuristic_background.dart';
 import '../src/widgets/futuristic_option.dart';
+import '../src/app_state.dart';
 import 'dart:async';
-import '../src/screens/home_screen.dart';
 import 'package:silent_sos/src/widgets/neon_widgets.dart';
 
 class PermissionScreen extends StatefulWidget {
@@ -14,24 +15,46 @@ class PermissionScreen extends StatefulWidget {
   State<PermissionScreen> createState() => _PermissionScreenState();
 }
 
-class _PermissionScreenState extends State<PermissionScreen> with SingleTickerProviderStateMixin {
+class _PermissionScreenState extends State<PermissionScreen>
+    with SingleTickerProviderStateMixin {
   bool _allPermissionsGranted = false;
-  final Map<String, bool> _permissionStatuses = {};
+  final Map<String, bool> _permissionStatuses = {
+    'Contacts': false,
+    'Location': false,
+    'Notifications': false,
+    'Camera': false,
+    'Microphone': false,
+    'Phone': false,
+    'SMS': false,
+  };
+
+  // All permissions are REQUIRED for app to function
+  static const Map<String, Permission> _requiredPermissions = {
+    'Contacts': Permission.contacts,
+    'Location': Permission.locationAlways,
+    'Notifications': Permission.notification,
+    'Camera': Permission.camera,
+    'Microphone': Permission.microphone,
+    'Phone': Permission.phone,
+    'SMS': Permission.sms,
+  };
+
   late final AnimationController _anim;
+  bool _requestingPermissions = false;
 
   @override
+  
   void initState() {
     super.initState();
-    _anim = AnimationController(vsync: this, duration: const Duration(milliseconds: 800));
-    // Initialize map with false values so UI can animate entries
-    _permissionStatuses['SMS'] = false;
-    _permissionStatuses['Contacts'] = false;
-    _permissionStatuses['Location'] = false;
-    _permissionStatuses['Notifications'] = false;
-    // Start requesting after a short delay to allow entrance animation
-    Future.delayed(const Duration(milliseconds: 300), () async {
+    _anim = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
+
+    Future.delayed(const Duration(milliseconds: 200), () async {
+      if (!mounted) return;
       _anim.forward();
-      await _requestPermissions(showAnimated: true);
+      await _initializePermissions();
     });
   }
 
@@ -41,126 +64,187 @@ class _PermissionScreenState extends State<PermissionScreen> with SingleTickerPr
     super.dispose();
   }
 
-  Future<void> _requestPermissions({bool showAnimated = false}) async {
-    // Skip permission checks on web platform
-    if (kIsWeb) {
-      setState(() {
-        _permissionStatuses['SMS'] = true;
-        _permissionStatuses['Contacts'] = true;
-        _permissionStatuses['Location'] = true;
-        _permissionStatuses['Notifications'] = true;
-        _allPermissionsGranted = true;
-      });
-      await Future.delayed(const Duration(milliseconds: 600));
-      if (!mounted) return;
-      Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const HomeScreen()));
+  Future<void> _initializePermissions() async {
+    if (_requestingPermissions) return;
+    _requestingPermissions = true;
+
+    final prefs = await SharedPreferences.getInstance();
+    final explainedBefore = prefs.getBool('permissions_explained') ?? false;
+
+    if (!explainedBefore && mounted) {
+      await _showPermissionExplanationOnce();
+      await prefs.setBool('permissions_explained', true);
+    }
+
+    await _requestAllPermissionsSequentially();
+
+    _requestingPermissions = false;
+  }
+
+  Future<void> _showPermissionExplanationOnce() async {
+    if (!mounted) return;
+
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Permissions Required for Safety'),
+        content: const SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Silent SOS needs these permissions to keep you safe:',
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
+              SizedBox(height: 12),
+              Text('📞 Contacts - To store emergency contacts'),
+              Text('📍 Location - To send your location at all times'),
+              Text('💬 SMS - To send emergency SMS alerts'),
+              Text('📷 Camera - To record video evidence'),
+              Text('🎤 Microphone - For voice activation'),
+              Text('🔔 Notifications - For emergency alerts'),
+              Text('📞 Phone - For emergency calling'),
+            ],
+          ),
+        ),
+        actions: [
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Proceed'),
+          ),
+        ],
+      ),
+    );
+
+    if (!mounted) return;
+  }
+
+  Future<void> _requestAllPermissionsSequentially() async {
+    if (_requestingPermissions) return;
+    _requestingPermissions = true;
+
+    final appState = Provider.of<AppState>(context, listen: false);
+
+    // Request all required permissions simply
+    for (var entry in _requiredPermissions.entries) {
+      try {
+        final status = await entry.value.request();
+        _permissionStatuses[entry.key] = status.isGranted;
+
+        switch (entry.key) {
+          case 'Contacts':
+            appState.updatePermission?.call('contacts', status.isGranted);
+            break;
+          case 'Location':
+            appState.updatePermission?.call('location', status.isGranted);
+            break;
+          case 'SMS':
+            appState.updatePermission?.call('sms', status.isGranted);
+            break;
+          case 'Notifications':
+            appState.updatePermission?.call('notifications', status.isGranted);
+            break;
+          case 'Camera':
+            appState.updatePermission?.call('camera', status.isGranted);
+            break;
+          case 'Microphone':
+            appState.updatePermission?.call('microphone', status.isGranted);
+            break;
+          case 'Phone':
+            appState.updatePermission?.call('phone', status.isGranted);
+            break;
+          default:
+            break;
+        }
+
+        setState(() {
+          _allPermissionsGranted =
+              _permissionStatuses.values.whereType<bool>().every((v) => v);
+        });
+      } catch (_) {
+        // ignore
+      }
+
+      await Future.delayed(const Duration(milliseconds: 100));
+    }
+
+    // All permissions are required to proceed
+    const requiredPermissionKeys = {
+      'Contacts',
+      'Location',
+      'Notifications',
+      'Camera',
+      'Microphone',
+      'Phone',
+      'SMS',
+    };
+
+    final allGranted = requiredPermissionKeys
+        .every((key) => _permissionStatuses[key] == true);
+
+    if (allGranted) {
+      final appState = Provider.of<AppState>(context, listen: false);
+      await appState.setPermissionsGranted();
+      _allPermissionsGranted = true;
+
+      // Navigate to the next screen instead of popping if this is the root.
+      if (mounted) {
+        await Future.delayed(const Duration(milliseconds: 300));
+        if (mounted) {
+          Navigator.of(context).pushReplacementNamed('/permissions_complete');
+        }
+      }
       return;
     }
 
-    // Request SMS
-    var smsStatus = await Permission.sms.status;
-    _permissionStatuses['SMS'] = smsStatus.isGranted;
-    setState(() {});
-    await Future.delayed(const Duration(milliseconds: 120));
-
-    // If SMS is not granted, show an explanation card with a button to request it explicitly
-    if (!smsStatus.isGranted) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        // ignore: use_build_context_synchronously
-        showDialog(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            title: const Text('SMS Permission required'),
-            content: const Text('To enable fully automatic SOS sending (without opening your SMS app), SilentSOS needs permission to send SMS on your behalf. You can choose to grant this now.'),
-            actions: [
-              TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Later')),
-              ElevatedButton(onPressed: () async {
-                Navigator.pop(ctx);
-                final res = await Permission.sms.request();
-                if (!mounted) return;
-                setState(() => _permissionStatuses['SMS'] = res.isGranted);
-                if (res.isPermanentlyDenied) {
-                  // Offer to open app settings
-                  showDialog(context: context, builder: (sctx) => AlertDialog(
-                    title: const Text('Open Settings'),
-                    content: const Text('SMS permission is permanently denied. Please open App Settings to grant it.'),
-                    actions: [TextButton(onPressed: () => Navigator.pop(sctx), child: const Text('Close')), TextButton(onPressed: () { Navigator.pop(sctx); openAppSettings(); }, child: const Text('Open Settings'))],
-                  ));
-                }
-              }, child: const Text('Grant SMS')),
-            ],
-          ),
-        );
+    if (mounted) {
+      setState(() {
+        _allPermissionsGranted = allGranted;
       });
-    }
-
-    // Request Contacts
-    var contactStatus = await Permission.contacts.request();
-    _permissionStatuses['Contacts'] = contactStatus.isGranted;
-    setState(() {});
-    await Future.delayed(const Duration(milliseconds: 120));
-
-    // Request Location (foreground)
-    var locationStatus = await Permission.location.request();
-    _permissionStatuses['Location'] = locationStatus.isGranted;
-    setState(() {});
-    await Future.delayed(const Duration(milliseconds: 120));
-
-    // Request Notifications
-    var notificationStatus = await Permission.notification.request();
-    _permissionStatuses['Notifications'] = notificationStatus.isGranted;
-    setState(() {});
-
-  // Request Camera and Microphone (needed for automatic recording)
-  var cameraStatus = await Permission.camera.request();
-  _permissionStatuses['Camera'] = cameraStatus.isGranted;
-  setState(() {});
-  await Future.delayed(const Duration(milliseconds: 120));
-
-  var micStatus = await Permission.microphone.request();
-  _permissionStatuses['Microphone'] = micStatus.isGranted;
-  setState(() {});
-
-    bool allGranted = _permissionStatuses.values.every((granted) => granted);
-
-    setState(() {
-      _allPermissionsGranted = allGranted;
-    });
-
-    if (allGranted) {
-      // give a short animated success pause then navigate
-      await Future.delayed(const Duration(milliseconds: 600));
-      if (!mounted) return;
-      Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const HomeScreen()));
     }
   }
 
   Widget _permissionTile(String name, bool granted, int index) {
-    final anim = CurvedAnimation(parent: _anim, curve: Interval((index / 6).clamp(0.0, 1.0), 1.0, curve: Curves.easeOut));
+    final anim = CurvedAnimation(
+        parent: _anim,
+        curve:
+            Interval((index / 7).clamp(0.0, 1.0), 1.0, curve: Curves.easeOut));
     return FadeTransition(
       opacity: anim,
       child: SlideTransition(
-        position: Tween<Offset>(begin: const Offset(0, 0.08), end: Offset.zero).animate(anim),
+        position: Tween<Offset>(begin: const Offset(0, 0.08), end: Offset.zero)
+            .animate(anim),
         child: Container(
           margin: const EdgeInsets.symmetric(vertical: 8),
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: granted ? Colors.black.withAlpha(80) : Colors.black.withAlpha(40),
+            color: granted
+                ? Colors.black.withAlpha(80)
+                : Colors.black.withAlpha(40),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: granted ? Colors.green.withAlpha(140) : Colors.white24),
+            border: Border.all(
+                color: granted ? Colors.green.withAlpha(140) : Colors.white24),
           ),
           child: Row(
             children: [
               AnimatedSwitcher(
                 duration: const Duration(milliseconds: 350),
-                transitionBuilder: (w, a) => ScaleTransition(scale: a, child: w),
-                child: Icon(granted ? Icons.check_circle : Icons.cancel, key: ValueKey<bool>(granted), color: granted ? Colors.greenAccent : Colors.redAccent),
+                transitionBuilder: (w, a) =>
+                    ScaleTransition(scale: a, child: w),
+                child: Icon(granted ? Icons.check_circle : Icons.cancel,
+                    key: ValueKey<bool>(granted),
+                    color: granted ? Colors.greenAccent : Colors.redAccent),
               ),
               const SizedBox(width: 12),
-              Text(name, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+              Text(name,
+                  style: const TextStyle(
+                      color: Colors.white, fontWeight: FontWeight.w600)),
               const Spacer(),
-              Text(granted ? 'Granted' : 'Pending', style: TextStyle(color: granted ? Colors.greenAccent : Colors.white70)),
+              Text(granted ? 'Granted' : 'Pending',
+                  style: TextStyle(
+                      color: granted ? Colors.greenAccent : Colors.white70)),
             ],
           ),
         ),
@@ -181,14 +265,28 @@ class _PermissionScreenState extends State<PermissionScreen> with SingleTickerPr
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    ScaleTransition(scale: Tween(begin: 0.9, end: 1.0).animate(CurvedAnimation(parent: _anim, curve: Curves.elasticOut)), child: const Icon(Icons.security, size: 86, color: Colors.white)),
+                    ScaleTransition(
+                        scale: Tween(begin: 0.9, end: 1.0).animate(
+                            CurvedAnimation(
+                                parent: _anim, curve: Curves.elasticOut)),
+                        child: const Icon(Icons.security,
+                            size: 86, color: Colors.white)),
                     const SizedBox(height: 18),
                     FadeTransition(
                       opacity: _anim,
-                      child: const Text('Enable Permissions', style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Colors.white)),
+                      child: const Text('Enable Permissions',
+                          style: TextStyle(
+                              fontSize: 26,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white)),
                     ),
                     const SizedBox(height: 10),
-                    FadeTransition(opacity: _anim, child: const Text('We need a few permissions to keep you safe.', style: TextStyle(color: Colors.white70), textAlign: TextAlign.center)),
+                    FadeTransition(
+                        opacity: _anim,
+                        child: const Text(
+                            'We need a few permissions to keep you safe.',
+                            style: TextStyle(color: Colors.white70),
+                            textAlign: TextAlign.center)),
                     const SizedBox(height: 18),
                     const SizedBox(height: 8),
                     // Permission tiles (scrollable)
@@ -196,32 +294,95 @@ class _PermissionScreenState extends State<PermissionScreen> with SingleTickerPr
                       child: SingleChildScrollView(
                         child: Column(
                           children: [
-                            FuturisticOption(child: Padding(padding: const EdgeInsets.all(8.0), child: _permissionTile('SMS', _permissionStatuses['SMS'] ?? false, 0))),
+                            FuturisticOption(
+                                child: Padding(
+                                    padding: const EdgeInsets.all(8.0),
+                                    child: _permissionTile(
+                                        'Contacts',
+                                        _permissionStatuses['Contacts'] ??
+                                            false,
+                                        0))),
                             const SizedBox(height: 8),
-                            FuturisticOption(child: Padding(padding: const EdgeInsets.all(8.0), child: _permissionTile('Contacts', _permissionStatuses['Contacts'] ?? false, 1))),
+                            FuturisticOption(
+                                child: Padding(
+                                    padding: const EdgeInsets.all(8.0),
+                                    child: _permissionTile(
+                                        'Microphone',
+                                        _permissionStatuses['Microphone'] ??
+                                            false,
+                                        1))),
                             const SizedBox(height: 8),
-                            FuturisticOption(child: Padding(padding: const EdgeInsets.all(8.0), child: _permissionTile('Location', _permissionStatuses['Location'] ?? false, 2))),
+                            FuturisticOption(
+                                child: Padding(
+                                    padding: const EdgeInsets.all(8.0),
+                                    child: _permissionTile(
+                                        'Camera',
+                                        _permissionStatuses['Camera'] ?? false,
+                                        2))),
                             const SizedBox(height: 8),
-                            FuturisticOption(child: Padding(padding: const EdgeInsets.all(8.0), child: _permissionTile('Notifications', _permissionStatuses['Notifications'] ?? false, 3))),
+                            FuturisticOption(
+                                child: Padding(
+                                    padding: const EdgeInsets.all(8.0),
+                                    child: _permissionTile(
+                                        'Notifications',
+                                        _permissionStatuses['Notifications'] ??
+                                            false,
+                                        3))),
+                            const SizedBox(height: 8),
+                            FuturisticOption(
+                                child: Padding(
+                                    padding: const EdgeInsets.all(8.0),
+                                    child: _permissionTile(
+                                        'Phone',
+                                        _permissionStatuses['Phone'] ?? false,
+                                        4))),
+                            const SizedBox(height: 8),
+                            FuturisticOption(
+                                child: Padding(
+                                    padding: const EdgeInsets.all(8.0),
+                                    child: _permissionTile(
+                                        'Location',
+                                        _permissionStatuses['Location'] ?? false,
+                                        5))),
+                            const SizedBox(height: 8),
+                            FuturisticOption(
+                                child: Padding(
+                                    padding: const EdgeInsets.all(8.0),
+                                    child: _permissionTile(
+                                        'SMS',
+                                        _permissionStatuses['SMS'] ?? false,
+                                        6))),
+                            const SizedBox(height: 8),
                           ],
                         ),
                       ),
                     ),
                     const SizedBox(height: 18),
                     ScaleTransition(
-                      scale: Tween(begin: 0.95, end: 1.0).animate(CurvedAnimation(parent: _anim, curve: const Interval(0.4, 1.0, curve: Curves.elasticOut))),
+                      scale: Tween(begin: 0.95, end: 1.0).animate(
+                          CurvedAnimation(
+                              parent: _anim,
+                              curve: const Interval(0.4, 1.0,
+                                  curve: Curves.elasticOut))),
                       child: NeonButton(
-                        onTap: () => _requestPermissions(),
+                        onTap: () => _requestAllPermissionsSequentially(),
                         child: Row(mainAxisSize: MainAxisSize.min, children: [
                           const Icon(Icons.shield, color: Colors.white),
                           const SizedBox(width: 10),
-                          Text(_allPermissionsGranted ? 'All Set' : 'Grant Permissions', style: const TextStyle(fontWeight: FontWeight.bold)),
+                          Text(
+                              _allPermissionsGranted
+                                  ? 'All Set'
+                                  : 'Grant Permissions',
+                              style:
+                                  const TextStyle(fontWeight: FontWeight.bold)),
                         ]),
                       ),
                     ),
                     const SizedBox(height: 12),
                     if (!_allPermissionsGranted)
-                      NeonButton(onTap: () => openAppSettings(), child: const Text('Open App Settings')),
+                      NeonButton(
+                          onTap: () => openAppSettings(),
+                          child: const Text('Open App Settings')),
                   ],
                 ),
               ),

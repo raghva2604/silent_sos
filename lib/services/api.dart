@@ -15,13 +15,17 @@ class Api {
     final req = http.MultipartRequest('POST', uri);
     req.fields['lang_hint'] = langHint;
     req.fields['device_offline'] = 'false';
-    req.files.add(await http.MultipartFile.fromPath('audio', audioFile.path, filename: 'req_audio.wav'));
+    req.files.add(await http.MultipartFile.fromPath('audio', audioFile.path,
+        filename: 'req_audio.wav'));
     if (imageFile != null) {
-      req.files.add(await http.MultipartFile.fromPath('image', imageFile.path, filename: 'injury.jpg'));
+      req.files.add(await http.MultipartFile.fromPath('image', imageFile.path,
+          filename: 'injury.jpg'));
     }
     final streamed = await req.send();
     final res = await http.Response.fromStream(streamed);
-    if (res.statusCode == 200) return json.decode(res.body) as Map<String, dynamic>;
+    if (res.statusCode == 200) {
+      return json.decode(res.body) as Map<String, dynamic>;
+    }
     throw Exception('API error ${res.statusCode}: ${res.body}');
   }
 
@@ -33,8 +37,11 @@ class Api {
     final uri = Uri.parse('$baseUrl/transcribe_and_analyze');
     final resp = await http.post(uri,
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'audio_b64': b, 'lang_hint': langHint, 'device_offline': false}));
-    if (resp.statusCode == 200) return json.decode(resp.body) as Map<String, dynamic>;
+        body: jsonEncode(
+            {'audio_b64': b, 'lang_hint': langHint, 'device_offline': false}));
+    if (resp.statusCode == 200) {
+      return json.decode(resp.body) as Map<String, dynamic>;
+    }
     throw Exception('API error ${resp.statusCode}: ${resp.body}');
   }
 }

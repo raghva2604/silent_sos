@@ -2,6 +2,13 @@ import 'package:vibration/vibration.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/foundation.dart';
 
+/// Vibration level enum
+enum VibrationLevel {
+  low,
+  medium,
+  strong,
+}
+
 /// Vibration customization service
 class VibrationService extends ChangeNotifier {
   static final VibrationService _instance = VibrationService._();
@@ -12,6 +19,7 @@ class VibrationService extends ChangeNotifier {
 
   int _intensity = 50; // 0-100 scale
   bool _enabled = true;
+  VibrationLevel _level = VibrationLevel.medium;
 
   static const int _minDurationMs = 10;
   static const int _maxDurationMs = 500;
@@ -21,7 +29,7 @@ class VibrationService extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     _intensity = prefs.getInt('vibration_intensity') ?? 50;
     _enabled = prefs.getBool('vibration_enabled') ?? true;
-    
+
     // Check if device supports vibration
     final canVibrate = await Vibration.hasVibrator();
     if (canVibrate == false) {
@@ -53,10 +61,44 @@ class VibrationService extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Get vibration level
+  VibrationLevel get level => _level;
+
+  /// Set vibration level (low/medium/strong)
+  Future<void> setLevel(VibrationLevel level) async {
+    _level = level;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('vibration_level', level.name);
+    notifyListeners();
+  }
+
+  /// Load vibration level from preferences
+  Future<void> loadLevel() async {
+    final prefs = await SharedPreferences.getInstance();
+    final levelName = prefs.getString('vibration_level') ?? 'medium';
+    _level = VibrationLevel.values.firstWhere(
+      (e) => e.name == levelName,
+      orElse: () => VibrationLevel.medium,
+    );
+  }
+
+  /// Get vibration pattern based on level (for notifications)
+  static Int64List getNotificationPattern(VibrationLevel level) {
+    switch (level) {
+      case VibrationLevel.low:
+        return Int64List.fromList([0, 300, 700, 300]);
+      case VibrationLevel.medium:
+        return Int64List.fromList([0, 500, 400, 500]);
+      case VibrationLevel.strong:
+        return Int64List.fromList([0, 800, 300, 800, 300, 800]);
+    }
+  }
+
   /// Calculate vibration duration based on intensity
   int _getDurationMs(int intensityLevel) {
     // Map intensity (0-100) to duration (10-500ms)
-    return ((intensityLevel / 100) * (_maxDurationMs - _minDurationMs)).toInt() +
+    return ((intensityLevel / 100) * (_maxDurationMs - _minDurationMs))
+            .toInt() +
         _minDurationMs;
   }
 
@@ -83,7 +125,7 @@ class VibrationService extends ChangeNotifier {
       await Future.delayed(Duration(milliseconds: duration ~/ 4));
       await Vibration.vibrate(duration: duration ~/ 2); // dot
       await Future.delayed(Duration(milliseconds: duration ~/ 2));
-      
+
       await Vibration.vibrate(duration: duration); // dash
       await Future.delayed(Duration(milliseconds: duration ~/ 4));
       await Vibration.vibrate(duration: duration); // dash

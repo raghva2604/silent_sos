@@ -21,7 +21,7 @@ class OfflineAIService {
     _checkConnectivity();
     _connectivitySubscription =
         _connectivity.onConnectivityChanged.listen((result) {
-      _isOnline = result != ConnectivityResult.none;
+      _isOnline = !result.contains(ConnectivityResult.none);
       debugPrint('Network status: ${_isOnline ? 'ONLINE' : 'OFFLINE'}');
     });
   }
@@ -30,7 +30,7 @@ class OfflineAIService {
   Future<void> _checkConnectivity() async {
     try {
       final result = await _connectivity.checkConnectivity();
-      _isOnline = result != ConnectivityResult.none;
+      _isOnline = !result.contains(ConnectivityResult.none);
     } catch (e) {
       debugPrint('Connectivity check error: $e');
       _isOnline = false;
@@ -47,9 +47,11 @@ class OfflineAIService {
         'success': true,
         'mode': 'offline',
         'triage': result['severity'],
-        'brief': result['brief'],
-        'reasons': result['reasons'],
-        'actions': result['actions'],
+        'brief': result['brief_message_for_contacts'] ??
+            result['brief'] ??
+            'No summary available',
+        'reasons': result['reasons'] ?? [],
+        'actions': result['immediate_actions'] ?? result['actions'] ?? [],
         'timestamp': DateTime.now().toIso8601String(),
       };
     } catch (e) {

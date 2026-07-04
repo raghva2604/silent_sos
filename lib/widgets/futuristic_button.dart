@@ -32,7 +32,9 @@ class FuturisticButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return ElevatedButton(
       onPressed: onPressed,
-      style: ElevatedButton.styleFrom(backgroundColor: _bg(context), minimumSize: Size(double.infinity, height)),
+      style: ElevatedButton.styleFrom(
+          backgroundColor: _bg(context),
+          minimumSize: Size(double.infinity, height)),
       child: child,
     );
   }
@@ -43,12 +45,15 @@ class FuturisticIconButton extends StatelessWidget {
   final VoidCallback? onPressed;
   final double size;
 
-  const FuturisticIconButton({super.key, required this.icon, required this.onPressed, this.size = 48});
+  const FuturisticIconButton(
+      {super.key, required this.icon, required this.onPressed, this.size = 48});
 
   @override
   Widget build(BuildContext context) {
-    return IconButton(onPressed: onPressed, icon: Icon(icon), iconSize: size, color: Theme.of(context).iconTheme.color);
+    return IconButton(
+        onPressed: onPressed,
+        icon: Icon(icon),
+        iconSize: size,
+        color: Theme.of(context).iconTheme.color);
   }
 }
-
-
