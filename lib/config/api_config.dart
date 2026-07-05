@@ -1,12 +1,12 @@
 class ApiConfig {
-  // Primary backend endpoint for local development when using adb reverse.
-  // The Android device reaches this as localhost through the reverse tunnel.
-  static const String baseUrl = "http://127.0.0.1:3000";
+    // Primary backend endpoint. Set to production host for deployed apps.
+    // Updated from local development hosts to production as requested.
+    static const String baseUrl = "http://niradevelopers.duckdns.org:3001";
 
-  // Secondary/fallback endpoint for local emulators or alternate routing.
-  // Update this to a reachable fallback teammate endpoint as needed.
-  static const String fallbackBaseUrl =
-      "http://10.0.2.2:3000"; // Emulator local fallback (Android).
+    // Fallback endpoint for emulators/devices if needed. Keep same host/port
+    // or change to an internal reachable address for testing.
+    static const String fallbackBaseUrl =
+      "http://niradevelopers.duckdns.org:3001";
 
   static const String sendSos = "$baseUrl/sos-send-sos";
   static const String sendSosFallback = "$fallbackBaseUrl/sos-send-sos";
