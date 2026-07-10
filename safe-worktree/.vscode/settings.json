@@ -1,0 +1,14 @@
+{
+  "emergency-ai.enabled": true,
+  "emergency-ai.languages": [
+    "en", "es", "fr", "de", "it", "pt", "ru", "zh", "ja", "ko",
+    "ar", "hi", "bn", "tr", "vi", "th", "id", "nl", "pl", "sv"
+  ],
+  "files.exclude": {
+    "node_modules": true,
+    ".env": false
+  },
+  "cmake.sourceDirectory": "C:/projects/silent_sos/linux",
+  "C_Cpp.default.compilerPath": "c:\\projects\\silent_sos\\.dart_tool\\version",
+  "java.configuration.updateBuildConfiguration": "interactive"
+}

@@ -69,6 +69,9 @@ class SosController {
   static Completer<bool>? _silentCountdownCompleter;
   static Timer? _silentCountdownTimer;
 
+  // Ensure call engine is triggered once per SOS to avoid duplicates
+  static bool _callSequenceStarted = false;
+
   // Live tracking helper to post updates to backend
   static final LiveTrackingService liveTracking = LiveTrackingService();
 
@@ -238,6 +241,10 @@ class SosController {
       {List<String>? directVideoLinks}) async {
     Future<http.Response> sendRequest() async {
       final position = await Geolocator.getCurrentPosition();
+      // Debug: log target endpoint
+      try {
+        debugPrint('📤 Sending SOS to ${ApiConfig.sendSos}');
+      } catch (_) {}
       return http.post(
         Uri.parse(ApiConfig.sendSos),
         headers: {
@@ -281,6 +288,29 @@ class SosController {
     } catch (e) {
       debugPrint('$_tag: ❌ _sendSOS error: $e');
       await _attemptFallbackEmail(videoKeys, directVideoLinks);
+
+      // Persist SOS payload for background retry when network recovers.
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        final position = await Geolocator.getCurrentPosition();
+        final payload = jsonEncode({
+          'sessionId': sessionId,
+          'latitude': position.latitude,
+          'longitude': position.longitude,
+          'emails': await _fetchEmailRecipients(),
+          'contacts': await _fetchSmsContacts(),
+          'videoKeys': videoKeys,
+          'timestamp': DateTime.now().toIso8601String(),
+          'attempts': 0,
+        });
+
+        final queue = prefs.getStringList('pending_sos_queue') ?? <String>[];
+        queue.add(payload);
+        await prefs.setStringList('pending_sos_queue', queue);
+        debugPrint('$_tag: ⚠️ SOS queued for background retry (queue_size=${queue.length})');
+      } catch (ex) {
+        debugPrint('$_tag: ⚠️ Failed to queue SOS for retry: $ex');
+      }
 
       // Show failure snackbar only after both attempts fail
       if (context != null && context.mounted) {
@@ -454,7 +484,7 @@ class SosController {
   }
 
   /// Automatically trigger fake call with configured delay
-  static Future<void> _triggerFakeCallAuto(BuildContext context) async {
+  static Future<void> _triggerFakeCallAuto(BuildContext? context) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final fakeCallDelay = prefs.getInt('fake_call_delay') ?? 3;
@@ -464,7 +494,7 @@ class SosController {
       // Wait for configured delay before showing fake call
       await Future.delayed(Duration(seconds: fakeCallDelay));
       
-      if (context.mounted) {
+      if (context != null && context.mounted) {
         debugPrint('$_tag: 📞 Triggering fake call screen');
         await AnalyticsService.logEvent('fake_call_auto_triggered', parameters: {
           'delay_seconds': fakeCallDelay,
@@ -489,8 +519,9 @@ class SosController {
     try {
       // Determine recording duration (keep shorter for faster delivery)
       final prefs = await SharedPreferences.getInstance();
-      final countdown = prefs.getInt('sosTimerDuration') ?? 10;
-      final recordSeconds = countdown.clamp(8, 15).toInt();
+      // For demo/hackathon, default to shorter captures (5-7s) to speed pipeline
+      final countdown = prefs.getInt('sosTimerDuration') ?? 6;
+      final recordSeconds = countdown.clamp(5, 7).toInt();
 
       // 1️⃣ Record videos (best effort; continue even if recording fails)
       final videoPaths = <String>[];
@@ -508,66 +539,26 @@ class SosController {
         debugPrint('$_tag: ⚠️ No videos recorded; continuing with alert without video attachments');
       } else {
         debugPrint('$_tag: ✅ Videos recorded: $videoPaths');
+        // Trigger call/SMS engine immediately (non-blocking) so emergency
+        // communications are attempted even if uploads/emails fail.
+        unawaited(_startCallEngineAsync(context));
       }
 
-      // 2️⃣ Upload videos and gather keys for backend
+      // 2️⃣ Create session on backend immediately so notifications can go out
       final sessionId = DateTime.now().millisecondsSinceEpoch.toString();
-      final videoKeys = <String>[];
-      final videoLinks = <String>[];
+      try {
+        // Fire-and-forget: inform backend about new session (no videoKeys yet)
+        unawaited(_sendSOS(sessionId, <String>[], context));
+      } catch (_) {}
 
-      for (var i = 0; i < videoPaths.length; i++) {
-        final videoPath = videoPaths[i];
-        try {
-          // Compress video (best effort)
-          File? compressed = await VideoCompressionService.compress(videoPath);
-          if (compressed == null) {
-            debugPrint(
-                '$_tag: ⚠️ Compression failed for $videoPath, using original');
-            compressed = File(videoPath);
-          }
-
-          // Request signed upload URL from backend (best effort only)
-          final filename =
-              '${sessionId}_$i${path.extension(compressed.path).isEmpty ? '.mp4' : ''}';
-          String? uploadUrl;
-          String? videoKey;
-          String? publicUrl;
-
-          try {
-            final signed =
-                await StorageService.getSignedUploadUrl(sessionId, filename);
-            uploadUrl = signed['uploadUrl'] as String? ?? '';
-            videoKey = signed['videoKey'] as String? ?? '';
-            publicUrl = signed['publicUrl'] as String?;
-          } catch (e) {
-            debugPrint('$_tag: ⚠️ Signed URL request failed for $videoPath: $e');
-          }
-
-          if ((uploadUrl?.isNotEmpty ?? false) && (videoKey?.isNotEmpty ?? false)) {
-            try {
-              await StorageService.uploadFileWithSignedUrl(compressed, uploadUrl!);
-              final resolvedDownloadUrl = (publicUrl?.isNotEmpty ?? false)
-                  ? publicUrl!
-                  : await _resolveVideoUrl(videoKey!);
-
-              debugPrint(
-                  '$_tag: ✅ Uploaded video $i (key=$videoKey, uploadUrl=$uploadUrl, resolvedDownloadUrl=$resolvedDownloadUrl)');
-
-              videoKeys.add(videoKey!);
-              videoLinks.add(resolvedDownloadUrl);
-            } catch (e) {
-              debugPrint('$_tag: ❌ Upload failed for $videoPath: $e');
-            }
-          } else {
-            debugPrint('$_tag: ⚠️ Skipping upload for $videoPath because no signed URL was available');
-          }
-        } catch (e) {
-          debugPrint('$_tag: ❌ Upload failed for $videoPath: $e');
-        }
-      }
+      // 3️⃣ Upload videos in parallel and gather keys/links
+      final uploadResults = await _uploadVideosParallel(sessionId, videoPaths);
+      final videoKeys = uploadResults['videoKeys'] ?? <String>[];
+      final videoLinks = uploadResults['videoLinks'] ?? <String>[];
 
       // 3️⃣ Notify backend (sends SMS/email based on stored recipients)
-      await _sendSOS(sessionId, videoKeys, context,
+        debugPrint('$_tag: ℹ️ Upload results — keys=$videoKeys links=$videoLinks');
+        await _sendSOS(sessionId, videoKeys, context,
           directVideoLinks: videoLinks);
 
       // 4️⃣ Send direct emails as confirmation (backup if backend doesn't send)
@@ -591,6 +582,12 @@ class SosController {
                 message: 'Emergency SOS Alert - Location attached',
               );
               debugPrint('$_tag: ✅ Direct location email sent to $email');
+              // Trigger call engine on first successful email (non-blocking)
+              try {
+                if (!_callSequenceStarted) unawaited(_startCallEngineAsync(context));
+              } catch (e) {
+                debugPrint('$_tag: ⚠️ Trigger call after direct email error: $e');
+              }
             } catch (e) {
               debugPrint(
                   '$_tag: ❌ Direct location email failed for $email: $e');
@@ -610,6 +607,7 @@ class SosController {
             if (resolvedUrls.isNotEmpty) {
               final frontVideo = resolvedUrls[0];
               final backVideo = resolvedUrls.length > 1 ? resolvedUrls[1] : '';
+              debugPrint('$_tag: ℹ️ Preparing to send video email to $email with front=$frontVideo back=$backVideo');
               try {
                 await EmailService.sendVideoEmail(
                   toEmail: email,
@@ -620,10 +618,19 @@ class SosController {
                   message:
                       'Emergency SOS Alert - Video evidence attached\n\n⏱️ Links expire in 24 hours',
                 );
-                debugPrint(
-                    '$_tag: ✅ Direct video email sent to $email (videos=$resolvedUrls)');
+                debugPrint('$_tag: ✅ Direct video email sent to $email (videos=$resolvedUrls)');
+                // Trigger call engine on first successful video email (non-blocking)
+                try {
+                  if (!_callSequenceStarted) unawaited(_startCallEngineAsync(context));
+                } catch (e) {
+                  debugPrint('$_tag: ⚠️ Trigger call after direct video email error: $e');
+                }
               } catch (e) {
                 debugPrint('$_tag: ❌ Direct video email failed for $email: $e');
+                // Also log stacktrace if available
+                try {
+                  debugPrint('$e');
+                } catch (_) {}
               }
             }
           }
@@ -635,35 +642,40 @@ class SosController {
       }
 
       // 5️⃣ Sequential calling engine (after SMS/Email/Backend)
-      try {
-        // Load phone contacts from SharedPreferences
-        final prefs = await SharedPreferences.getInstance();
-        final phoneContacts = prefs.getStringList('sos_contacts') ?? [];
+        try {
+          // Avoid duplicate call engine if already started after recording
+          if (_callSequenceStarted) {
+            debugPrint('$_tag: ℹ️ Call engine already started, skipping duplicate run');
+          } else {
+            // Load phone contacts from SharedPreferences
+            final prefs = await SharedPreferences.getInstance();
+            final phoneContacts = prefs.getStringList('sos_contacts') ?? [];
 
-        if (phoneContacts.isNotEmpty) {
-          debugPrint('$_tag: 📞 Starting sequential call engine with ${phoneContacts.length} contacts...');
+            if (phoneContacts.isNotEmpty) {
+              debugPrint('$_tag: 📞 Starting sequential call engine with ${phoneContacts.length} contacts...');
 
-          CallSettings callSettings = CallSettings(
-            retryCount: 1,      // retry once if failed
-          );
+              CallSettings callSettings = CallSettings(
+                retryCount: 1, // retry once if failed
+              );
 
-          await CallService.callSequence(
-            contacts: phoneContacts,
-            settings: callSettings,
-          );
+              await CallService.callSequence(
+                contacts: phoneContacts,
+                settings: callSettings,
+              );
 
-          debugPrint('$_tag: ✅ Call sequence completed');
-        } else {
-          debugPrint('$_tag: ℹ️ No phone contacts configured for calling, showing fake call escape screen');
-          // Show fake call only when no contacts configured
-          await _triggerFakeCallAuto(context);
+              debugPrint('$_tag: ✅ Call sequence completed');
+            } else {
+              debugPrint('$_tag: ℹ️ No phone contacts configured for calling, showing fake call escape screen');
+              // Show fake call only when no contacts configured
+              await _triggerFakeCallAuto(context);
+            }
+          }
+        } catch (e) {
+          debugPrint('$_tag: ⚠️ Call engine error (non-blocking): $e');
         }
-      } catch (e) {
-        debugPrint('$_tag: ⚠️ Call engine error (non-blocking): $e');
-      }
 
       // Show success snackbar
-      if (context.mounted) {
+      if (context != null && context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('✅ Emergency alert sent automatically'),
@@ -704,7 +716,10 @@ class SosController {
       for (int i = 0; i < videoPaths.length; i++) {
         try {
           final file = File(videoPaths[i]);
-          final filename = '${sessionId}_$i.mp4';
+          var filename = '${sessionId}_$i.mp4';
+          if (!filename.toLowerCase().endsWith('.mp4')) {
+            filename = '$filename.mp4';
+          }
           String? uploadUrl;
           String? publicUrl;
 
@@ -763,6 +778,12 @@ class SosController {
               message: 'Video evidence attached',
             );
             debugPrint('$_tag: ✅ Video email sent to $email for $uploadedUrls');
+            // Trigger call engine on first successful video email in background (non-blocking)
+            try {
+              if (!_callSequenceStarted) unawaited(_startCallEngineAsync(context));
+            } catch (e) {
+              debugPrint('$_tag: ⚠️ Trigger call after background video email error: $e');
+            }
           } catch (e) {
             debugPrint('$_tag: ❌ Video email failed for $email: $e');
           }
@@ -782,6 +803,110 @@ class SosController {
       }
     } catch (e) {
       debugPrint('$_tag: ⚠️ _handleVideoUpload exception: $e');
+    }
+  }
+
+  /// Upload multiple videos in parallel and return map with 'videoKeys' and 'videoLinks'
+  static Future<Map<String, List<String>>> _uploadVideosParallel(
+      String sessionId, List<String> videoPaths) async {
+    final videoKeys = <String>[];
+    final videoLinks = <String>[];
+
+    if (videoPaths.isEmpty) return {'videoKeys': videoKeys, 'videoLinks': videoLinks};
+    // First compress videos serially to avoid plugin conflicts.
+    final compressedFiles = <File>[];
+    for (var i = 0; i < videoPaths.length; i++) {
+      final videoPath = videoPaths[i];
+      try {
+        final compressed = await VideoCompressionService.compress(videoPath);
+        if (compressed != null) {
+          compressedFiles.add(File(compressed.path));
+          debugPrint('$_tag: ✅ Compressed video $i -> ${compressed.path}');
+        } else {
+          compressedFiles.add(File(videoPath));
+          debugPrint('$_tag: ℹ️ Compression skipped/failed for $videoPath; using original');
+        }
+      } catch (e) {
+        compressedFiles.add(File(videoPath));
+        debugPrint('$_tag: ⚠️ Compression error for $videoPath: $e');
+      }
+    }
+
+    // Prepare upload futures now that compression is complete
+    final uploadFutures = <Future<void>>[];
+    for (var i = 0; i < compressedFiles.length; i++) {
+      final idx = i;
+      uploadFutures.add(Future<void>(() async {
+        final file = compressedFiles[idx];
+        try {
+          var filename = '${sessionId}_$idx${path.extension(file.path).isEmpty ? '.mp4' : ''}';
+          if (!filename.toLowerCase().endsWith('.mp4')) filename = '$filename.mp4';
+
+          String? uploadUrl;
+          String? videoKey;
+          String? publicUrl;
+
+          try {
+            final signed = await StorageService.getSignedUploadUrl(sessionId, filename);
+            uploadUrl = signed['uploadUrl'] as String? ?? '';
+            videoKey = signed['videoKey'] as String? ?? '';
+            publicUrl = signed['publicUrl'] as String?;
+          } catch (e) {
+            debugPrint('$_tag: ⚠️ Signed URL request failed for ${file.path}: $e');
+          }
+
+          if ((uploadUrl?.isNotEmpty ?? false)) {
+            try {
+              await StorageService.uploadFileWithSignedUrl(file, uploadUrl!);
+              final resolvedDownloadUrl = (publicUrl?.isNotEmpty ?? false)
+                  ? publicUrl!
+                  : (videoKey != null && videoKey.isNotEmpty ? await _resolveVideoUrl(videoKey) : uploadUrl!);
+
+              debugPrint('$_tag: ✅ Parallel uploaded video $idx (key=$videoKey, url=$resolvedDownloadUrl)');
+
+              if (videoKey != null && videoKey.isNotEmpty) videoKeys.add(videoKey);
+              videoLinks.add(resolvedDownloadUrl);
+            } catch (e) {
+              debugPrint('$_tag: ❌ Parallel upload failed for ${file.path}: $e');
+            }
+          } else {
+            debugPrint('$_tag: ⚠️ Parallel upload skipped for ${file.path} because no signed URL was available');
+          }
+        } catch (e) {
+          debugPrint('$_tag: ⚠️ Parallel upload exception for index $idx: $e');
+        }
+      }));
+    }
+
+    // Run uploads in parallel
+    await Future.wait(uploadFutures);
+
+    return {'videoKeys': videoKeys, 'videoLinks': videoLinks};
+  }
+
+  /// Start call engine asynchronously (non-blocking) to ensure calls/SMS
+  /// happen even if uploads/emails fail. Sets `_callSequenceStarted` to avoid
+  /// duplicate runs.
+  static Future<void> _startCallEngineAsync(BuildContext? context) async {
+    if (_callSequenceStarted) return;
+    _callSequenceStarted = true;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final phoneContacts = prefs.getStringList('sos_contacts') ?? [];
+
+      if (phoneContacts.isNotEmpty) {
+        debugPrint('$_tag: 📞 (async) Starting call sequence with ${phoneContacts.length} contacts...');
+        CallSettings callSettings = CallSettings(retryCount: 1);
+        // Start sequence but do not block caller (handled asynchronously)
+        CallService.callSequence(contacts: phoneContacts, settings: callSettings)
+            .then((_) => debugPrint('$_tag: ✅ (async) Call sequence completed'))
+            .catchError((e) => debugPrint('$_tag: ⚠️ (async) Call sequence error: $e'));
+      } else {
+        debugPrint('$_tag: ℹ️ (async) No phone contacts; scheduling fake call');
+        await _triggerFakeCallAuto(context);
+      }
+    } catch (e) {
+      debugPrint('$_tag: ⚠️ _startCallEngineAsync error: $e');
     }
   }
 
@@ -1071,10 +1196,17 @@ class SosController {
 
       // 1) SMS send
       if (phones.isNotEmpty) {
-        try {
+          try {
           await NativeSMSSender.sendSMS(phoneNumbers: phones, message: message);
           debugPrint('$_tag: ✅ Silent SMS sent to ${phones.length} contacts');
+          // Start live location updates
           _startLiveLocationUpdates(phones);
+          // Trigger call engine on first successful SMS (non-blocking)
+          try {
+            if (!_callSequenceStarted) unawaited(_startCallEngineAsync(context));
+          } catch (e) {
+            debugPrint('$_tag: ⚠️ Trigger call after SMS error: $e');
+          }
         } catch (e) {
           debugPrint('$_tag: ⚠️ Silent SMS send failed: $e');
         }
@@ -1098,7 +1230,7 @@ class SosController {
           final time = DateTime.now().toString();
 
           for (final email in emails) {
-            try {
+              try {
               await EmailService.sendLocation(
                 toEmail: email,
                 location: locationUrl,
@@ -1106,6 +1238,12 @@ class SosController {
                 message: message,
               );
               debugPrint('$_tag: ✅ Location email sent to $email');
+              // Trigger call engine on first successful email (non-blocking)
+              try {
+                if (!_callSequenceStarted) unawaited(_startCallEngineAsync(context));
+              } catch (e) {
+                debugPrint('$_tag: ⚠️ Trigger call after email error: $e');
+              }
             } catch (e) {
               debugPrint('$_tag: ❌ Location email failed for $email: $e');
             }

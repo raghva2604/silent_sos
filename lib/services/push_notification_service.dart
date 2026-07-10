@@ -8,12 +8,7 @@ import 'analytics_service.dart';
 
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp();
-  await NotificationService.init();
   debugPrint('📩 [Background] FCM message received: ${message.messageId}');
-  await NotificationService.showAlertNotification(
-    message.notification?.title ?? 'Silent SOS',
-    message.notification?.body ?? 'You have a new emergency update.',
-  );
   await AnalyticsService.logEvent('fcm_background_message', parameters: {
     'message_id': message.messageId ?? 'unknown',
   });

@@ -1,0 +1,177 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    package="com.example.silent_sos">
+    <!-- Runtime permissions required by the app. These must be declared so the
+        platform can show permission prompts at runtime when requested by the
+        Flutter/Dart code (permission_handler / geolocator / flutter_contacts).
+    -->
+    <uses-feature
+        android:name="android.hardware.telephony"
+        android:required="false"
+        tools:targetApi="5" />
+    <uses-feature
+        android:name="android.hardware.camera"
+        android:required="false"
+        tools:targetApi="5" />
+
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.READ_CONTACTS" />
+    <!-- Additional sensor & battery permissions requested for background fall detection (optional) -->
+    <!-- remove if not needed: <uses-permission android:name="android.permission.BODY_SENSORS" /> -->
+    <!-- remove if not needed: <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" /> -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+    <!-- Camera & microphone required for automatic media recording (opt-in) -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <!-- Background location access (request separately on Android 10+ to allow 'Allow all the time') -->
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION"
+        tools:ignore="BackgroundLocationPolicy" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <!-- Foreground service type permissions required by Android 14+ -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CAMERA" />
+    <!-- Optional health-type foreground service for Android 14+ health sensors -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_HEALTH" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <!-- Notifications on Android 13+ require a runtime permission -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Network access for Emergency AI webhook communication -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Storage access for file uploads and emergency data -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.CALL_PHONE"/>
+    <!-- SMS permission for direct SMS sending (bypasses app interception) -->
+    <uses-permission android:name="android.permission.SEND_SMS"/>
+    <!-- Phone state permissions for detecting when call is answered (for TTS) -->
+    <uses-permission android:name="android.permission.READ_CALL_LOG" />
+    <uses-permission android:name="android.permission.READ_PHONE_STATE" />
+    <!-- Programmatic SMS permission removed: app uses user-facing SMS intent (smsto:) and share sheet. -->
+    <!-- Fullscreen overlay permission for SOS countdown display over all apps -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <!-- Body sensors for fall detection -->
+    <uses-permission android:name="android.permission.BODY_SENSORS" />
+    <!-- Wake lock for background foreground service -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+
+    <application
+        android:label="Silent SOS"
+        android:name="com.example.silent_sos.App"
+        android:icon="@mipmap/ic_launcher">
+        <!-- Google Maps API Key for google_maps_flutter -->
+        <meta-data
+            android:name="com.google.android.geo.API_KEY"
+            android:value="YOUR_GOOGLE_MAPS_API_KEY" />
+        <!-- Google App Actions configuration for emergency voice commands -->
+        <meta-data
+            android:name="com.google.android.actions"
+            android:resource="@xml/actions" />
+        <!-- FileProvider to serve local media files to the Telephony/MMS APIs when sending
+             multimedia messages silently. We expose cache/, files/, and external storage
+             paths. The authority is <applicationId>.fileprovider and the paths are
+             defined in res/xml/file_paths.xml. -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:taskAffinity=""
+            android:theme="@style/LaunchTheme"
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
+            android:hardwareAccelerated="true"
+            android:windowSoftInputMode="adjustResize">
+            <!-- Specifies an Android theme to apply to this Activity as soon as
+                 the Android process has started. This theme is visible to the user
+                 while the Flutter UI initializes. After that, this theme continues
+                 to determine the Window background behind the Flutter UI. -->
+            <meta-data
+              android:name="io.flutter.embedding.android.NormalTheme"
+              android:resource="@style/NormalTheme"
+              />
+            <!-- Normal launcher intent -->
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+            <!-- Google Assistant / Deep link with autoVerify for app link verification -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="https"
+                    android:host="silent-sos.app"
+                    android:path="/emergency" />
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name=".StealthActivity"
+            android:enabled="false"
+            android:exported="true"
+            android:theme="@style/LaunchTheme">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+        </activity>
+    <!-- Background service declarations have all been removed. The app operates entirely in‑app now. -->
+    <!-- Flutter Foreground Task Service for background fall & voice detection -->
+    <service
+        android:name="com.pravera.flutter_foreground_task.service.ForegroundService"
+        android:foregroundServiceType="location|microphone"
+        android:exported="false" />
+    <!-- Boot receiver restarts protection service after reboot (removed) -->
+    <!--
+    <receiver android:name=".BootReceiver" android:enabled="true" android:exported="false">
+        <intent-filter>
+            <action android:name="android.intent.action.BOOT_COMPLETED" />
+        </intent-filter>
+    </receiver>
+    -->
+
+    <!-- DISABLED Phase 1: NetworkReceiver
+    <receiver android:name=".NetworkReceiver" android:enabled="true" android:exported="false">
+        <intent-filter>
+            <action android:name="android.net.conn.CONNECTIVITY_CHANGE" />
+        </intent-filter>
+    </receiver>
+    -->
+        <!-- Flutter Background Service for live location tracking during SOS -->
+        <!-- tools:replace required to override plugin's default exported=true with our foregroundServiceType -->
+        <service
+            android:name="id.flutter.flutter_background_service.BackgroundService"
+            android:foregroundServiceType="location"
+            android:exported="false"
+            tools:replace="android:exported" />
+        <!-- Don't delete the meta-data below.
+             This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
+        <meta-data
+            android:name="flutterEmbedding"
+            android:value="2" />
+    </application>
+    <!-- Required to query activities that can process text, see:
+         https://developer.android.com/training/package-visibility and
+         https://developer.android.com/reference/android/content/Intent#ACTION_PROCESS_TEXT.
+
+         In particular, this is used by the Flutter engine in io.flutter.plugin.text.ProcessTextPlugin. -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.PROCESS_TEXT"/>
+            <data android:mimeType="text/plain"/>
+        </intent>
+    </queries>
+</manifest>

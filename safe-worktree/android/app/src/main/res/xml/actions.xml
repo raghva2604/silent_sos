@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Google App Actions configuration for emergency voice commands
+     This file defines how the app responds to Google Assistant intents related to emergencies -->
+<actions>
+    <!-- Emergency action triggered by "Hey Google, emergency" or similar commands -->
+    <action intentName="actions.intent.START_EMERGENCY">
+        <fulfillment urlTemplate="https://silent-sos.app/emergency">
+            <parameter-mapping intentParameter="emergencyType" urlParameter="type" />
+        </fulfillment>
+        <parameter name="emergencyType" />
+    </action>
+
+    <!-- SOS action for direct "Hey Google, SOS" commands -->
+    <action intentName="actions.intent.SOS">
+        <fulfillment urlTemplate="https://silent-sos.app/emergency?type=sos" />
+    </action>
+
+    <!-- Help action for "Hey Google, help" commands -->
+    <action intentName="actions.intent.HELP">
+        <fulfillment urlTemplate="https://silent-sos.app/emergency?type=help" />
+    </action>
+
+    <!-- Generic action for voice matching common emergency phrases -->
+    <action intentName="actions.intent.TEXT">
+        <fulfillment urlTemplate="https://silent-sos.app/emergency?query={query}" />
+        <parameter name="query" />
+    </action>
+</actions>

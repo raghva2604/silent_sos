@@ -112,6 +112,20 @@ class _RecipientsPickerScreenState extends State<RecipientsPickerScreen>
     }
   }
 
+  // Search filter state
+  String _searchQuery = '';
+
+  List<Contact> get _filteredContacts {
+    if (_searchQuery.isEmpty) return _allContacts;
+    final q = _searchQuery.toLowerCase();
+    return _allContacts.where((c) {
+      final name = (c.displayName ?? '').toLowerCase();
+      final phones = c.phones.map((p) => p.number).join(' ').toLowerCase();
+      final emails = c.emails.map((e) => e.address).join(' ').toLowerCase();
+      return name.contains(q) || phones.contains(q) || emails.contains(q);
+    }).toList();
+  }
+
   Future<void> _loadSelectedContactIds() async {
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getString('selected_device_contacts') ?? '[]';
@@ -351,6 +365,21 @@ class _RecipientsPickerScreenState extends State<RecipientsPickerScreen>
                 // Device Contacts Tab
                 Column(
                   children: [
+                    // Search
+                    Padding(
+                      padding: const EdgeInsets.all(12.0),
+                      child: TextField(
+                        decoration: const InputDecoration(
+                          prefixIcon: Icon(Icons.search),
+                          hintText: 'Search contacts by name/number',
+                        ),
+                        onChanged: (v) {
+                          setState(() {
+                            _searchQuery = v.trim();
+                          });
+                        },
+                      ),
+                    ),
                     // Selection header (prominent display)
                     Container(
                       width: double.infinity,
@@ -417,12 +446,12 @@ class _RecipientsPickerScreenState extends State<RecipientsPickerScreen>
                       ),
                     ),
                     Expanded(
-                      child: _allContacts.isEmpty
+                      child: _filteredContacts.isEmpty
                           ? const Center(child: Text('No contacts found'))
                           : ListView.builder(
-                              itemCount: _allContacts.length,
+                              itemCount: _filteredContacts.length,
                               itemBuilder: (ctx, i) {
-                                final contact = _allContacts[i];
+                                final contact = _filteredContacts[i];
                                 final contactId = contact.id ?? '';
                                 final isSelected =
                                     contactId.isNotEmpty &&

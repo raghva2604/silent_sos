@@ -1,0 +1,16 @@
+{
+  "name": "emergency-ai-vscode",
+  "version": "1.0.0",
+  "description": "Emergency AI Assistant for VS Code",
+  "scripts": {
+    "start": "echo \"No Node AI client. Use TensorFlow scripts or Flutter app.\"",
+    "tfjs:train": "node src/tfjs/train.js",
+    "tfjs:infer": "node src/tfjs/infer.js"
+  },
+  "keywords": ["emergency", "ai", "assistant", "n8n"],
+  "author": "Your Name",
+  "license": "MIT",
+  "dependencies": {
+    "@tensorflow/tfjs-node": "^4.10.0"
+  }
+}

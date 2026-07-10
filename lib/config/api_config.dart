@@ -1,6 +1,6 @@
 class ApiConfig {
     // Primary backend endpoint. Set to production host for deployed apps.
-    // Updated from local development hosts to production as requested.
+    // Prefer the stable DuckDNS domain so the app does not need a hardcoded IP.
     static const String baseUrl = "http://niradevelopers.duckdns.org:3001";
 
     // Fallback endpoint for emulators/devices if needed. Keep same host/port

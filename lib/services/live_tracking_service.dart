@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 import 'package:connectivity_plus/connectivity_plus.dart';
@@ -58,30 +59,47 @@ class LiveTrackingService {
         final primaryUri = Uri.parse(ApiConfig.updateLiveLocation);
         final fallbackUri = Uri.parse(ApiConfig.updateLiveLocationFallback);
 
+        // Before attempting network I/O, attempt DNS lookup with retry/backoff
+        final host = primaryUri.host;
+        final backoffs = [0, 2, 5];
         http.Response? response;
-        try {
-          response = await sendTo(primaryUri);
-        } catch (e) {
-          // ignore: avoid_print
-          print('⚠️ Live tracking primary host failed: $e');
-          if (e.toString().contains('Failed host lookup') ||
-              e.toString().contains('No address associated with hostname')) {
+
+        for (var attempt = 0; attempt < backoffs.length; attempt++) {
+          if (attempt > 0) await Future.delayed(Duration(seconds: backoffs[attempt]));
+          try {
+            try {
+              await InternetAddress.lookup(host);
+            } catch (e) {
+              // DNS failed for this attempt; try next backoff
+              // ignore: avoid_print
+              print('⚠️ LiveTracking host lookup failed for $host: $e');
+              continue;
+            }
+
+            response = await sendTo(primaryUri).timeout(const Duration(seconds: 5));
+            break;
+          } catch (e) {
+            // ignore: avoid_print
+            print('⚠️ Live tracking primary host failed (attempt ${attempt + 1}): $e');
             response = null;
-          } else {
-            rethrow;
           }
         }
 
-        if (response == null ||
-            (response.statusCode != 200 && response.statusCode != 201)) {
-          // Attempt fallback endpoint (only log once per attempt, not every failure)
+        if (response == null || (response.statusCode != 200 && response.statusCode != 201)) {
           try {
-            response = await sendTo(fallbackUri);
+            // try fallback once
+            try {
+              await InternetAddress.lookup(fallbackUri.host);
+              response = await sendTo(fallbackUri).timeout(const Duration(seconds: 5));
+            } catch (e) {
+              response = null;
+            }
           } catch (e) {
             response = null;
+          }
+
+          if (response == null) {
             _consecutiveFailures++;
-            
-            // Stop after multiple failures to reduce log noise
             if (_consecutiveFailures >= _maxConsecutiveFailures) {
               // ignore: avoid_print
               print('⚠️ Live tracking disabled after $_maxConsecutiveFailures consecutive failures');
@@ -91,8 +109,7 @@ class LiveTrackingService {
           }
         }
 
-        if (response != null &&
-            (response.statusCode == 200 || response.statusCode == 201)) {
+        if (response != null && (response.statusCode == 200 || response.statusCode == 201)) {
           _consecutiveFailures = 0;
           // ignore: avoid_print
           print('📍 Live location sent successfully (${timer.tick})');

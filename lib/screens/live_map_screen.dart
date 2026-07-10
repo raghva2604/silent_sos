@@ -16,7 +16,7 @@ class LiveMapScreen extends StatefulWidget {
   State<LiveMapScreen> createState() => _LiveMapScreenState();
 }
 
-class _LiveMapScreenState extends State<LiveMapScreen> with SingleTickerProviderStateMixin {
+class _LiveMapScreenState extends State<LiveMapScreen> with TickerProviderStateMixin {
   final MapController mapController = MapController();
 
   LatLng currentLocation = LatLng(17.3850, 78.4867);

@@ -13,7 +13,7 @@ class PermissionScreen extends StatefulWidget {
   State<PermissionScreen> createState() => _PermissionScreenState();
 }
 
-class _PermissionScreenState extends State<PermissionScreen> {
+class _PermissionScreenState extends State<PermissionScreen> with WidgetsBindingObserver {
   // This UI expects your AppState to be the provider with flags:
   // smsGranted, contactsGranted, locationGranted, notificationsGranted
   @override
@@ -153,6 +153,47 @@ class _PermissionScreenState extends State<PermissionScreen> {
         ],
       ),
     );
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      // When returning from app settings, re-evaluate permissions and update AppState
+      _refreshPermissions();
+    }
+  }
+
+  Future<void> _refreshPermissions() async {
+    try {
+      final appState = Provider.of<AppState>(context, listen: false);
+      final sms = await Permission.sms.status;
+      final contacts = await Permission.contacts.status;
+      final location = await Permission.location.status;
+      final mic = await Permission.microphone.status;
+      final camera = await Permission.camera.status;
+      final notifications = await Permission.notification.status;
+
+      appState.updatePermission?.call('sms', sms.isGranted);
+      appState.updatePermission?.call('contacts', contacts.isGranted);
+      appState.updatePermission?.call('location', location.isGranted);
+      appState.updatePermission?.call('microphone', mic.isGranted);
+      appState.updatePermission?.call('camera', camera.isGranted);
+      appState.updatePermission?.call('notifications', notifications.isGranted);
+    } catch (e) {
+      debugPrint('⚠️ PermissionScreen: failed to refresh permissions: $e');
+    }
   }
 
   Widget _permCard(

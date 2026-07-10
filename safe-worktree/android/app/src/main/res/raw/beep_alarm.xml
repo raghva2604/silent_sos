@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<audio-attributes>
+  <!-- Beep tone for SOS alerts -->
+  <stream>STREAM_ALARM</stream>
+</audio-attributes>

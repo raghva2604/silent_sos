@@ -1,0 +1,117 @@
+# Miscellaneous
+*.class
+*.log
+*.pyc
+*.swp
+.DS_Store
+.atom/
+.build/
+.buildlog/
+.history
+.svn/
+.swiftpm/
+migrate_working_dir/
+
+# IntelliJ related
+*.iml
+*.ipr
+*.iws
+.idea/
+
+# The .vscode folder contains launch configuration and tasks you configure in
+# VS Code which you may wish to be included in version control, so this line
+# is commented out by default.
+#.vscode/
+
+# Flutter/Dart/Pub related
+**/doc/api/
+**/ios/Flutter/.last_build_id
+.dart_tool/
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+/build/
+/coverage/
+
+# Symbolication related
+app.*.symbols
+
+# Obfuscation related
+app.*.map.json
+
+# Android Studio will place build artifacts here
+/android/app/debug
+/android/app/profile
+/android/app/release
+
+# Local server environment file (DO NOT COMMIT)
+/server/.env
+backend_server/.env
+backend_inference/.env
+backend/.env
+.env
+.env.local
+
+# Ignore project root env file that may contain secrets
+firebase_options.dart
+google-services.json
+GoogleService-Info.plist
+.firebaserc
+
+# Build/temp files
+*.apk
+*.aab
+window_dump.xml
+build_log.txt
+flutter_*.txt
+dart_analyze*.txt
+logcat.txt
+*.backup
+
+# Session docs (temporary summaries)
+BACKEND_TESTING_COMPLETE.md
+COMPLETION_SUMMARY*.md
+FIXES_APPLIED.md
+REVIEW_AND_FIX_SUMMARY.md
+SESSION_STATUS_SUMMARY.md
+INTEGRATION_CHECKLIST.md
+FILE_MANIFEST*.md
+NATIVE_UPLOAD*.md
+PRESIGNED_S3*.md
+PHASE*.md
+DOCUMENTATION_INDEX.md
+QUICK_START_REFERENCE.md
+START_HERE.md
+
+# Backend/inference directories (can be added separately)
+backend_server/uploads/
+backend_server/db.sqlite
+backend_inference/venv/
+backend/venv/
+
+# Python venv
+.venv/
+venv/
+
+# Node modules (for backends)
+backend_server/node_modules/
+
+# Test/temp
+temp/
+untitled/
+curl_*.txt
+screenshot*.png
+/.env
+ 
+# Backend local env and virtualenv
+/backend/.env
+/backend/.venv/
+// backend_server env (local secrets)
+/backend_server/.env
+
+# Large ML models (Vosk, TFLite, etc. — too large for source control)
+/backend/models/vosk_*/
+/backend/models/injury_detector.tflite
+/backend/models/labels.txt
+
+node_modules

@@ -47,6 +47,14 @@ class StorageService {
       headers['Authorization'] = 'Bearer $idToken';
     }
 
+    // Debug: log endpoint and payload
+    try {
+      // ignore: avoid_print
+      print('🌍 StorageService: POST $uri');
+      // ignore: avoid_print
+      print('📤 Payload: sessionId=$sessionId filename=$filename');
+    } catch (_) {}
+
     final resp = await http
         .post(
           uri,
@@ -58,8 +66,45 @@ class StorageService {
         )
         .timeout(const Duration(seconds: 20));
 
+    // Debug: log response status and body
+    try {
+      // ignore: avoid_print
+      print('🌍 StorageService: resp.statusCode=${resp.statusCode}');
+      // ignore: avoid_print
+      print('🌍 StorageService: resp.body=${resp.body}');
+    } catch (_) {}
+
     if (resp.statusCode == 200) {
-      return jsonDecode(resp.body) as Map<String, dynamic>;
+      final result = jsonDecode(resp.body) as Map<String, dynamic>;
+
+      // Emergency workaround: if backend returned an internal/private IP
+      // in the uploadUrl (for example 172.31.x.x or 10.x.x.x), rewrite the
+      // host to the public host configured in ApiConfig.baseUrl so mobile
+      // clients can reach it. This is temporary until SERVER_BASE_URL
+      // is properly set on the server.
+      try {
+        final uploadUrl = result['uploadUrl'] as String? ?? '';
+        if (uploadUrl.isNotEmpty) {
+          final uri = Uri.parse(uploadUrl);
+          final host = uri.host;
+          if (host.startsWith('10.') || host.startsWith('172.') || host.startsWith('192.168.')) {
+            final base = Uri.parse(ApiConfig.baseUrl);
+            final fixed = uri.replace(host: base.host, port: base.hasPort ? base.port : uri.port, scheme: base.scheme);
+            result['uploadUrl'] = fixed.toString();
+            // also rewrite publicUrl if present
+            if (result.containsKey('publicUrl')) {
+              final pub = result['publicUrl'] as String? ?? '';
+              if (pub.isNotEmpty) {
+                final pubUri = Uri.parse(pub);
+                final fixedPub = pubUri.replace(host: base.host, port: base.hasPort ? base.port : pubUri.port, scheme: base.scheme);
+                result['publicUrl'] = fixedPub.toString();
+              }
+            }
+          }
+        }
+      } catch (_) {}
+
+      return result;
     }
 
     throw Exception(

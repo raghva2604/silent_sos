@@ -1049,11 +1049,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                             );
                           }),
                           _smallOption(
-                              Icons.smart_toy,
-                              'AI',
-                              () =>
-                                  Navigator.pushNamed(context, '/offline_ai')),
-                          _smallOption(
                               Icons.palette,
                               'Personalize',
                               () =>
@@ -1069,7 +1064,63 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 ),
               ),
             ),
+            // Movable floating AI button
+            DraggableAiButton(),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Draggable AI floating button — preserves position during session
+class DraggableAiButton extends StatefulWidget {
+  const DraggableAiButton({super.key});
+
+  @override
+  State<DraggableAiButton> createState() => _DraggableAiButtonState();
+}
+
+class _DraggableAiButtonState extends State<DraggableAiButton> {
+  double? _left;
+  double? _top;
+  final double size = 56.0;
+
+  void _ensureInitPosition(BuildContext context) {
+    if (_left != null && _top != null) return;
+    final w = MediaQuery.of(context).size.width;
+    final h = MediaQuery.of(context).size.height;
+    // default: bottom-right with some padding
+    setState(() {
+      _left = w - 16 - size;
+      _top = h - 140 - size - MediaQuery.of(context).padding.bottom;
+      if (_top! < 80) _top = 80; // avoid overlaying appbar
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    _ensureInitPosition(context);
+    return Positioned(
+      left: _left ?? 0,
+      top: _top ?? 0,
+      child: GestureDetector(
+        onPanUpdate: (details) {
+          setState(() {
+            _left = (_left ?? 0) + details.delta.dx;
+            _top = (_top ?? 0) + details.delta.dy;
+            final w = MediaQuery.of(context).size.width;
+            final h = MediaQuery.of(context).size.height;
+            _left = _left!.clamp(8.0, w - size - 8.0);
+            _top = _top!.clamp(8.0, h - size - 80.0);
+          });
+        },
+        child: FloatingActionButton(
+          heroTag: 'floating_ai',
+          backgroundColor: const Color.fromARGB(235, 53, 177, 165),
+          onPressed: () => Navigator.pushNamed(context, '/offline_ai'),
+          child: const Icon(Icons.auto_awesome, size: 28),
+          tooltip: 'AI Assistant',
         ),
       ),
     );

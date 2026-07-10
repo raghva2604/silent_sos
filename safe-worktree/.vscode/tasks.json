@@ -1,0 +1,50 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Flutter Run (Debug Mode)",
+			"type": "shell",
+			"command": "flutter run",
+			"args": [],
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "build"
+		}
+		,
+		{
+			"label": "TF (Python): Train",
+			"type": "shell",
+			"command": "python",
+			"args": ["src/tf/train.py"],
+			"presentation": { "reveal": "always", "panel": "new" }
+		},
+		{
+			"label": "TF (Python): Infer",
+			"type": "shell",
+			"command": "python",
+			"args": ["src/tf/infer.py"],
+			"presentation": { "reveal": "always", "panel": "new" }
+		},
+		{
+			"label": "TFJS (Node): Train",
+			"type": "shell",
+			"command": "npm",
+			"args": ["run", "tfjs:train"],
+			"presentation": { "reveal": "always", "panel": "new" }
+		},
+		{
+			"label": "TFJS (Node): Infer",
+			"type": "shell",
+			"command": "npm",
+			"args": ["run", "tfjs:infer"],
+			"presentation": { "reveal": "always", "panel": "new" }
+		},
+		{
+			"label": "Flutter: TFLite Example Run",
+			"type": "shell",
+			"command": "flutter",
+			"args": ["run"],
+			"presentation": { "reveal": "always", "panel": "new" }
+		}
+	]
+}
