@@ -8,6 +8,8 @@ const os = require('os');
 const { connectDb } = require('./db');
 const locationRoutes = require('./routes/location');
 const aiRoutes = require('./routes/ai');
+const authRoutes = require('./routes/auth');
+const complaintRoutes = require('./routes/complaints');
 const { initSocketServer } = require('./websocket/socket');
 
 const app = express();
@@ -108,6 +110,8 @@ app.post(['/sos-send-sos', '/prod/sos-send-sos', '/sos'], (req, res) => {
 
 app.use('/', locationRoutes);
 app.use('/ai', aiRoutes);
+app.use('/auth', authRoutes);
+app.use('/complaints', complaintRoutes);
 
 const server = http.createServer(app);
 initSocketServer(server);
